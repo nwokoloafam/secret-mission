@@ -10,7 +10,7 @@ export function db(): postgres.Sql {
   if (!url) throw new Error("DATABASE_URL is not set. See README → Setup.");
   _sql = postgres(url, {
     ssl: url.includes("localhost") || url.includes("127.0.0.1") ? false : "require",
-    max: 5,
+    max: Number(process.env.DB_POOL_MAX ?? 5),
     idle_timeout: 20,
   });
   return _sql;
