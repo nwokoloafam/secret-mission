@@ -1,0 +1,6 @@
+# Copy to .dev.vars and fill locally. Never commit real values.
+# Use the same Supabase project as the intended deployment.
+# The transaction pooler URL includes the database password (port 6543).
+DATABASE_URL=
+SUPABASE_URL=
+SUPABASE_SERVICE_ROLE_KEY=

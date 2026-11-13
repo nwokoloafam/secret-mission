@@ -16,7 +16,7 @@ Design notes and decided rules live in [`background-info/`](background-info/READ
 | `supabase/seed/missions.sql` | Missions, generated from `background-info/missions/missions.md`. |
 | `scripts/missions-to-sql.ts` | The generator. |
 
-Hosting: Vercel (auto-deploys `main`). Database and photos: Supabase.
+Hosting: Vercel (auto-deploys `main`), with a parallel Cloudflare Workers deployment path. Database and photos: Supabase. See [Cloudflare setup](docs/cloudflare.md) for commands, secrets, collaboration, and verification.
 
 ## Setup (one time)
 
