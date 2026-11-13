@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { connection } from "next/server";
 import { COPY } from "@/lib/copy";
 import { currentGame } from "@/lib/db/queries";
@@ -13,7 +14,8 @@ export default async function JoinPage() {
       {game ? (
         <>
           <p className="muted">
-            Takes a minute. Use a clear photo of your face so your hunter can find you at the party.
+            Takes a minute. Use a clear photo of your face so your hunter can find you at the party.{" "}
+            <Link href="/how">How the game works</Link>
           </p>
           <JoinForm />
         </>

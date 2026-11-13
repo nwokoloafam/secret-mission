@@ -25,6 +25,9 @@ export default async function Home() {
           <Link href="/join" className="btn primary" style={{ textDecoration: "none", justifySelf: "center" }}>
             Apply now
           </Link>
+          <Link href="/how" style={{ justifySelf: "center" }}>
+            How to play
+          </Link>
           <p className="muted small">Already applied? Open the personal link you got when you signed up.</p>
         </>
       ) : (

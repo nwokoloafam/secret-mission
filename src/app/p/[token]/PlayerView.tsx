@@ -75,7 +75,12 @@ export function PlayerView({ data }: { data: PlayerViewData }) {
           <p className="eyebrow">{COPY.gameName}</p>
           <h2>{me.firstName}</h2>
         </div>
-        <Avatar url={me.photoUrl} name={me.firstName} size={52} />
+        <div className="row" style={{ gap: 10 }}>
+          <Link href="/how" className="help-link">
+            How to play
+          </Link>
+          <Avatar url={me.photoUrl} name={me.firstName} size={52} />
+        </div>
       </header>
 
       {paused && <p className="banner warn">{COPY.paused}</p>}
