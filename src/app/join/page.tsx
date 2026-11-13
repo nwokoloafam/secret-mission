@@ -14,7 +14,7 @@ export default async function JoinPage() {
       {game ? (
         <>
           <p className="muted">
-            Takes a minute. Use a clear photo of your face so your hunter can find you at the party.{" "}
+            Takes a minute.{" "}
             <Link href="/how">How the game works</Link>
           </p>
           <JoinForm />

@@ -35,7 +35,7 @@ export function JoinForm() {
         <input name="how" placeholder="College, work, family…" required maxLength={40} />
       </label>
       <label>
-        Photo of your face
+        A clear photo of your face (so your hunter can find you)
         <input name="photoPicker" type="file" accept="image/*" onChange={onPhoto} />
       </label>
       {preview && (

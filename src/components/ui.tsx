@@ -103,6 +103,46 @@ export function Avatar({ url, name, size = 64 }: { url: string | null; name: str
   );
 }
 
+/** Copy / share the player's personal link so it isn't lost. */
+export function SaveLink({ token }: { token: string }) {
+  const [msg, setMsg] = useState<string | null>(null);
+  const url = () => `${window.location.origin}/p/${token}`;
+  async function copy() {
+    try {
+      await navigator.clipboard.writeText(url());
+      setMsg("Copied! Paste it in your Notes or a text to yourself.");
+    } catch {
+      setMsg(url());
+    }
+  }
+  async function share() {
+    try {
+      await navigator.share({ title: "My Secret Mission link", url: url() });
+    } catch {
+      /* closed the share sheet */
+    }
+  }
+  // Only phones offer a share sheet; check after load so server and browser agree.
+  const [canShare, setCanShare] = useState(false);
+  useEffect(() => {
+    const t = setTimeout(() => setCanShare("share" in navigator), 0);
+    return () => clearTimeout(t);
+  }, []);
+  return (
+    <div className="stack">
+      <div className="row wrap">
+        <Btn onClick={copy}>📋 Copy my link</Btn>
+        {canShare && (
+          <Btn kind="ghost" onClick={share}>
+            Share / save…
+          </Btn>
+        )}
+      </div>
+      {msg && <p className="flash ok">{msg}</p>}
+    </div>
+  );
+}
+
 /** Shrinks a phone photo before upload (max 800px, JPEG). */
 export async function shrinkImage(file: File, max = 800): Promise<File> {
   try {

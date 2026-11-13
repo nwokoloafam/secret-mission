@@ -18,7 +18,7 @@ import {
   updatePhoto,
 } from "@/app/actions";
 import { ACCESSORIES, COPY, TOP_COLORS } from "@/lib/copy";
-import { AutoRefresh, Avatar, Btn, Countdown, Flash, shrinkImage, useAction } from "@/components/ui";
+import { AutoRefresh, Avatar, Btn, Countdown, Flash, SaveLink, shrinkImage, useAction } from "@/components/ui";
 
 type Person = { id: string; firstName: string; photoUrl: string | null };
 
@@ -142,6 +142,12 @@ export function PlayerView({ data }: { data: PlayerViewData }) {
       )}
 
       <PhotoUpdate data={data} />
+      {me.status !== "registered" && (
+        <details className="card">
+          <summary>Save my link</summary>
+          <SaveLink token={data.token} />
+        </details>
+      )}
     </main>
   );
 }
@@ -157,9 +163,9 @@ function NotHereYet({ data }: { data: PlayerViewData }) {
       <div className="card highlight">
         <h3>You&apos;re signed up 🎉</h3>
         <p className="muted">
-          <strong>Bookmark this page</strong> or add it to your home screen. It&apos;s your personal link for the
-          game.
+          This page is your personal link to the game. Save it so you can get back in on party night.
         </p>
+        <SaveLink token={data.token} />
       </div>
       <div className="card">
         <h3>At the party? Check in</h3>
@@ -598,7 +604,7 @@ function PhotoUpdate({ data }: { data: PlayerViewData }) {
   const missing = !data.me.photoUrl;
   return (
     <details className="card" open={missing && data.game.status !== "ended"}>
-      <summary>{missing ? "⚠️ Add your photo so your hunter can find you" : "Update your photo"}</summary>
+      <summary>{missing ? "⚠️ Add your photo so your hunter can find you" : "Change your photo (one in tonight's outfit helps)"}</summary>
       <input
         type="file"
         accept="image/*"
