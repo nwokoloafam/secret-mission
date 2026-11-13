@@ -1,12 +1,13 @@
 // Picks the next hint about a player, escalating each time:
-//   group → outfit → custom (Afam's) → initial
+//   outfit → custom (Afam's) → initial
+// ("How they know Afam" isn't a tier: the target card already shows it.)
 // A tier is skipped when its info is missing, or when it would match more
 // than half of the players still alive (too vague to help).
 // Rules reference: background-info/rules/accusation-options.md
 
 import { GameState, HintSource, Player } from "./types";
 
-export const HINT_TIERS: HintSource[] = ["group", "outfit", "custom", "initial"];
+export const HINT_TIERS: HintSource[] = ["outfit", "custom", "initial"];
 
 export interface PickedHint {
   source: HintSource;
