@@ -9,6 +9,7 @@ import {
   ActionResult,
   Ctx,
   DEFAULT_SETTINGS,
+  GameError,
   Game,
   GameState,
   Mission,
@@ -139,6 +140,25 @@ async function saveResult(tx: Tx, before: GameState, result: ActionResult) {
   }
 }
 
+/**
+ * Safety limits for one game transaction (Postgres SET LOCAL, so they work
+ * through Supabase's transaction pooler). If something holds the game lock or
+ * a query stalls, we fail in seconds instead of hanging every page.
+ */
+async function limitTransaction(tx: Tx) {
+  await tx`select set_config('lock_timeout', '5s', true),
+                  set_config('statement_timeout', '10s', true),
+                  set_config('idle_in_transaction_session_timeout', '15s', true)`;
+}
+
+function friendly(e: unknown): never {
+  const code = (e as { code?: string })?.code;
+  if (code === "55P03" || code === "57014") {
+    throw new GameError("busy", "The game is busy right now. Try again in a moment.");
+  }
+  throw e;
+}
+
 function realCtx(): Ctx {
   return { now: new Date(), random: Math.random };
 }
@@ -152,7 +172,8 @@ export async function runAction(
   gameId: string,
   action: (state: GameState, ctx: Ctx) => ActionResult,
 ): Promise<ActionResult> {
-  return db().begin(async (tx) => {
+  return (db().begin(async (tx) => {
+    await limitTransaction(tx);
     const ctx = realCtx();
     const loaded = await loadState(tx, gameId, true);
 
@@ -163,12 +184,17 @@ export async function runAction(
     const result = action(current, ctx);
     await saveResult(tx, current, result);
     return result;
-  }) as Promise<ActionResult>;
+  }) as Promise<ActionResult>).catch(friendly);
 }
 
 /** Apply anything that's come due. Called every ~30s by the admin page. */
 export async function runTick(gameId: string): Promise<ActionResult | null> {
+  // Cheap check without taking the game lock: most ticks have nothing to do.
+  const peek = await loadState(db(), gameId, false);
+  if (!tick(peek, realCtx())) return null;
+
   return db().begin(async (tx) => {
+    await limitTransaction(tx);
     const loaded = await loadState(tx, gameId, true);
     const ticked = tick(loaded, realCtx());
     if (ticked) await saveResult(tx, loaded, ticked);

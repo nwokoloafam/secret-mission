@@ -68,7 +68,7 @@ export function PlayerView({ data }: { data: PlayerViewData }) {
 
   return (
     <main className="page">
-      <AutoRefresh seconds={5} onTick={tick} tickEvery={60} />
+      <AutoRefresh seconds={8} onTick={tick} tickEvery={120} />
 
       <header className="row spread">
         <div className="stack" style={{ gap: 2 }}>

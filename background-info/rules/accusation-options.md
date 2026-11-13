@@ -29,17 +29,18 @@
 Hints come from data the game already has, plus one tiny check-in step. Never the full name or photo.
 
 **Hint sources**
-- **Group:** "how they know Afam" from sign-up (college, work, family). Weak.
+- ~~**Group:** "how they know Afam" from sign-up.~~ Dropped: already on the target card.
 - **Outfit:** at check-in, the player taps their top color and one accessory (glasses / hat / none). Two taps, no typing. Medium.
 - **Initial:** first letter of first name. Strong.
 - **Custom (per player):** Afam writes a hint for each player from admin, before or during the game ("loudest laugh in the room", "wearing Afam's old jacket"). Optional; players without one skip that tier.
 
 **Escalation**
 Each wrong accusation by the same player gives the next tier up:
-1. Group: "Your target knows Afam from college"
-2. Outfit: "Your target is wearing black"
-3. Custom: Afam's hint for that player (skipped if none)
-4. Initial: "Your target's name starts with M"
+1. Outfit: "Your target is wearing black"
+2. Custom: Afam's hint for that player (skipped if none)
+3. Initial: "Your target's name starts with M"
+
+"How they know Afam" was dropped as a tier during testing (Nov 12): the target card already shows it, so it gave no new information.
 
 If a tier would reveal too little (e.g. 15 people from college), skip to the next. The hunter gets the hint as a notification and on their target card.
 

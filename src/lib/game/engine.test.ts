@@ -234,7 +234,7 @@ describe("accusations", () => {
     const r = accuse(s, ctx(5), "p0", wrong.id);
     expect(P(r.state, "p0").accusationsUsed).toBe(1);
     expect(r.hints).toHaveLength(1);
-    expect(r.hints[0]).toMatchObject({ toPlayerId: hunter.id, aboutPlayerId: "p0", source: "group" });
+    expect(r.hints[0]).toMatchObject({ toPlayerId: hunter.id, aboutPlayerId: "p0", source: "outfit" });
     expectError(() => accuse(r.state, ctx(6), "p0", hunter.id), "no_accusations");
   });
 
@@ -261,7 +261,7 @@ describe("accusations", () => {
 });
 
 describe("hints", () => {
-  it("escalates group → outfit → custom → initial", () => {
+  it("escalates outfit → custom → initial", () => {
     const s = started(6);
     const p0 = P(s, "p0");
     p0.customHint = "Loudest laugh in the room";
@@ -273,13 +273,13 @@ describe("hints", () => {
       sources.push(h.source);
       p0.hintTierRevealed = h.nextTier;
     }
-    expect(sources).toEqual(["group", "outfit", "custom", "initial"]);
+    expect(sources).toEqual(["outfit", "custom", "initial"]);
   });
 
   it("skips a tier that matches more than half the room", () => {
     const s = started(6);
-    s.players.forEach((p) => (p.howKnowAfam = "college"));
-    expect(nextHintFor(s, "p0")!.source).toBe("outfit");
+    s.players.forEach((p) => (p.topColor = "Black"));
+    expect(nextHintFor(s, "p0")!.source).toBe("initial");
   });
 });
 
