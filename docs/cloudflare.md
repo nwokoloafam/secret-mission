@@ -12,6 +12,8 @@ Copy `.dev.vars.example` to `.dev.vars` and fill in the three values. This file 
 - `SUPABASE_URL`: the existing project's API URL.
 - `SUPABASE_SERVICE_ROLE_KEY`: existing server-only secret key, used for photo uploads.
 
+The hosted Worker uses the configured Hyperdrive binding. Local Workers development points that binding at local Supabase (`127.0.0.1:54322`) by default; start and seed a local database first, or export `LOCAL_DATABASE_URL` before running the dev command to select another isolated database. It does not automatically reuse the production `DATABASE_URL` when the binding is present.
+
 Supabase is retained for data and photos. Pointing both deployments at the same project means both operate on the same games. Use an isolated test database for destructive rehearsals; the current signup flow selects the newest unfinished game, so creating a second game in the live database does not isolate it.
 
 ## Commands
@@ -32,15 +34,19 @@ The deployment uses vinext and Cloudflare's Vite plugin. The migration tooling i
 
 ## Database lifecycle
 
-Cloudflare sockets belong to the request that creates them. `vite.config.ts` maps the normal database client to `client.cloudflare.ts` in the Worker build only. That adapter shares a connection during a React server render, opens independent clients for calls outside that render, and closes every created client after the response. It disables prepared statements and pipelining beyond one query for the Supabase transaction pooler. The existing Next/Vercel client is unchanged.
+Cloudflare sockets belong to the request that creates them. `vite.config.ts` maps the normal database client to `client.cloudflare.ts` in the Worker build only. That adapter shares a connection during a React server render, opens independent clients for calls outside that render, and closes every created client after the response. It uses the `HYPERDRIVE` binding when configured; the `DATABASE_URL` fallback disables prepared statements and limits pipelining for Supabase transaction pooling. The existing Next/Vercel client is unchanged.
+
+Hosted Workers cannot validate this project's Supabase certificate through the raw socket driver. Use Hyperdrive with the Supabase **direct** endpoint (port 5432, user `postgres`), its public CA certificate, and `verify-full` TLS verification. Hyperdrive manages the encrypted origin connection; the adapter connects to its internal proxy. The `secret-mission-db` configuration has query caching disabled so joins and game actions are immediately visible, and limits origin connections to five for the shared database.
+
+Download the public certificate from Supabase **Database → Settings → SSL configuration → Download certificate**. Creating the certificate configuration requires the CLI's `ssl_certs:write` scope in addition to deployment permissions. Never put the database password or API keys in configuration committed to Git. See [Cloudflare's Supabase setup](https://developers.cloudflare.com/hyperdrive/examples/connect-to-postgres/postgres-database-providers/supabase/) and [certificate verification](https://developers.cloudflare.com/hyperdrive/configuration/tls-ssl-certificates-for-hyperdrive/).
 
 ## Accounts and deployment
 
 The Worker is named `secret-mission` in Radhika's Cloudflare account. Deploy to its `workers.dev` URL first. Keep the existing Vercel deployment and domain unchanged until the Worker has been verified.
 
-Register a free account-level `workers.dev` subdomain once in Cloudflare Workers onboarding.
+The account already has `chinniradhika98.workers.dev`. Manage it under **Compute → Workers & Pages → Account details → Subdomain**; no new domain purchase is needed.
 
-Authenticate with `npx cf auth login --scopes account:read user:read workers:write workers_scripts:write`. Secret values are supplied to Cloudflare at runtime, not embedded in builds. A browser login alone does not authenticate the local CLI.
+Authenticate with `npx cf auth login --scopes account:read user:read workers:write workers_scripts:write ssl_certs:write`. Secret values are supplied to Cloudflare at runtime, not embedded in builds. A browser login alone does not authenticate the local CLI.
 
 To share management access: Cloudflare **Manage account → Members → Invite members**. A **Super Administrator – All Privileges** member has full control of the whole account, including billing and other members. Each person uses their own login. Choose a narrower Workers role when full account control is not intended.
 
@@ -59,4 +65,4 @@ For automatic Cloudflare deployments, connect this GitHub repository in the Work
 - Check desktop and phone-sized pages, including repeated page changes and controls.
 - Change only the chosen game hostname after verification; keep Vercel available for rollback.
 
-Local workerd on this Mac has rejected the Supabase pooler certificate with Apple error -67901 (certificate validity period). Node's connection succeeds. Do not disable certificate validation; validate the hosted Workers connection separately.
+Both local workerd and the hosted Worker rejected the direct socket connection to Supabase's pooler. A successful Node connection with `ssl: "require"` does not prove certificate verification: this driver's Node path does not verify the server certificate in that mode. Validate the Hyperdrive connection on the hosted Worker before domain cutover.

@@ -13,6 +13,13 @@ export default defineConfig({
     },
     env: {
       ASSETS: bindings.assets(),
+      HYPERDRIVE: bindings.hyperdrive({
+        id: "a5f366fe1341478894a2230e322009b6",
+        dev: {
+          connectionString: process.env.LOCAL_DATABASE_URL ??
+            "postgres://postgres:postgres@127.0.0.1:54322/postgres",
+        },
+      }),
       DATABASE_URL: bindings.secret(),
       SUPABASE_URL: bindings.secret(),
       SUPABASE_SERVICE_ROLE_KEY: bindings.secret(),

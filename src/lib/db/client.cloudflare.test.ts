@@ -3,8 +3,10 @@ import { beforeEach, afterEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({
   postgres: vi.fn(),
   after: vi.fn(),
+  env: {} as { HYPERDRIVE?: { connectionString: string } },
 }));
 
+vi.mock("cloudflare:workers", () => ({ env: mocks.env }));
 vi.mock("postgres", () => ({ default: mocks.postgres }));
 vi.mock("next/server", () => ({ after: mocks.after }));
 
@@ -22,6 +24,7 @@ function client() {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  delete mocks.env.HYPERDRIVE;
   vi.stubEnv("DATABASE_URL", "postgres://test:password@database.example:6543/postgres");
   mocks.postgres.mockImplementation(client);
 });
@@ -31,6 +34,27 @@ afterEach(() => {
 });
 
 describe("Cloudflare database client", () => {
+  it("prefers the Hyperdrive binding and preserves prepared statements and default pipelining", async () => {
+    const connectionString = "postgres://proxy:password@hyperdrive.internal:5432/postgres";
+    mocks.env.HYPERDRIVE = { connectionString };
+    const sql = db();
+    expect(mocks.postgres).toHaveBeenCalledExactlyOnceWith(connectionString, {
+      ssl: false,
+      max: 5,
+      prepare: true,
+      connect_timeout: 10,
+    });
+    expect(sql.end).not.toHaveBeenCalled();
+    await mocks.after.mock.calls[0][0]();
+    expect(sql.end).toHaveBeenCalledExactlyOnceWith({ timeout: 5 });
+  });
+
+  it("uses Hyperdrive without a DATABASE_URL secret", () => {
+    vi.stubEnv("DATABASE_URL", undefined);
+    mocks.env.HYPERDRIVE = { connectionString: "postgres://proxy:password@hyperdrive.internal:5432/postgres" };
+    expect(() => db()).not.toThrow();
+  });
+
   it("reads the runtime secret lazily and fails before allocating a client when absent", () => {
     vi.stubEnv("DATABASE_URL", undefined);
     expect(() => db()).toThrow("DATABASE_URL is not set");
