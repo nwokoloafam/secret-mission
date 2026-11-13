@@ -11,6 +11,10 @@ export function db(): postgres.Sql {
   _sql = postgres(url, {
     ssl: url.includes("localhost") || url.includes("127.0.0.1") ? false : "require",
     max: Number(process.env.DB_POOL_MAX ?? 5),
+    // Supabase's transaction pooler (port 6543) can't keep prepared statements
+    // between requests; without this, queries randomly fail with
+    // 'prepared statement "..." already exists / does not exist'.
+    prepare: false,
     idle_timeout: 20,
   });
   return _sql;
