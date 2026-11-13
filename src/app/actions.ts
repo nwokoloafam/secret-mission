@@ -127,7 +127,8 @@ export async function submitKillAction(token: string, code: string): Promise<Res
   return wrap(async () => {
     const r = await play(token, (s, c, id) => E.submitKill(s, c, id, code));
     const kill = r.events.find((e) => e.type === "kill");
-    return { ok: true, message: "Got them.", data: { victimId: kill?.subjectId ?? null } };
+    const drink = r.state.game.settings.barTabOpen ? " 🍺 Your drink's on Afam's tab." : "";
+    return { ok: true, message: `Got them.${drink}`, data: { victimId: kill?.subjectId ?? null } };
   });
 }
 
@@ -144,7 +145,10 @@ export async function accuseAction(token: string, suspectId: string): Promise<Re
     const r = await play(token, (s, c, id) => E.accuse(s, c, id, suspectId));
     const right = r.events.some((e) => e.type === "accuse_right");
     return right
-      ? { ok: true, message: "You caught your hunter! They're out, and you're shielded for 10 minutes." }
+      ? {
+          ok: true,
+          message: `You caught your hunter! They're out, and you're shielded for 10 minutes.${r.state.game.settings.barTabOpen ? " 🍺 Drink's on Afam's tab." : ""}`,
+        }
       : { ok: true, message: "Wrong guess. Your hunter just got a clue about you…" };
   });
 }
@@ -317,6 +321,15 @@ export async function hostResolveDispute(admin: string, disputeId: string, uphel
     }
     await db()`update disputes set status = ${upheld ? "upheld" : "rejected"} where id = ${disputeId}`;
     await logEvent(g.id, "dispute_resolved", null, d.against as string, { upheld });
+  });
+}
+
+export async function hostSetBarTab(admin: string, open: boolean): Promise<Result> {
+  return wrap(async () => {
+    const g = await asHost(admin);
+    await db()`update games set settings = settings || ${db().json({ barTabOpen: open })} where id = ${g.id}`;
+    await logEvent(g.id, "bar_tab", null, null, { open });
+    return { ok: true, message: open ? "Bar tab reopened." : "Bar tab closed. Everyone's been told." };
   });
 }
 

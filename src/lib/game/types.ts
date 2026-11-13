@@ -25,6 +25,8 @@ export interface Settings {
   /** Hard missions only get handed out once this many players (or fewer) are alive. */
   hardMissionsAtAlive: number;
   silentFinal: boolean;
+  /** Afam's bar tab: while open, each catch earns a drink (honor system). */
+  barTabOpen: boolean;
   defaultDurationMinutes: number;
 }
 
@@ -37,6 +39,7 @@ export const DEFAULT_SETTINGS: Settings = {
   joinCutoffMinutes: 90,
   hardMissionsAtAlive: 5,
   silentFinal: false,
+  barTabOpen: true,
   defaultDurationMinutes: 150,
 };
 

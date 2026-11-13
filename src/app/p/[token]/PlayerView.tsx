@@ -48,7 +48,7 @@ export interface PlayerViewData {
     status: string;
     targetEndAt: string | null;
     winnerName: string | null;
-    settings: { bonusAt: number };
+    settings: { bonusAt: number; barTabOpen: boolean };
   };
   target: (Person & { how: string | null }) | null;
   mission: string | null;
@@ -85,6 +85,9 @@ export function PlayerView({ data }: { data: PlayerViewData }) {
 
       {paused && <p className="banner warn">{COPY.paused}</p>}
       {data.broadcast && <p className="banner">📣 {data.broadcast}</p>}
+      {running && !game.settings.barTabOpen && (
+        <p className="banner">🍺 The bar tab is finished! Catches still count, drinks are on you now.</p>
+      )}
 
       {running && (
         <div className="row spread small muted">

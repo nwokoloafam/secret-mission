@@ -23,6 +23,12 @@ Locked-in changes on top of `../plan-overview.md`. This is the source of truth f
 - Removing a player is **not** a kill: no one gets kill credit.
 - Removed players show up in the end reveal as "left early."
 
+## Drinks
+- **Every catch earns a beer, a shot, or a mocktail on Afam's bar tab.** Correct accusations count as catches.
+- **Honor system:** players tell the bartender; nothing in the app tracks it. (A phone voucher with a "Redeem" button was considered and parked for later.)
+- **Afam can close the tab** from the admin page ("Close the tab"). Every player then sees a banner that the tab is finished; catches still count. He can reopen it.
+- No task ever requires drinking.
+
 ## Missions
 - **One reroll per player.** Self-serve, no need to ask Afam.
 - **Afam's skip is the backstop:** if a player has used their reroll and is still stuck (target left, mission doesn't fit), Afam can skip the mission from admin.

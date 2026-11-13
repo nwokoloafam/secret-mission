@@ -16,6 +16,7 @@ import {
   hostResume,
   hostSendHint,
   hostSetCustomHint,
+  hostSetBarTab,
   hostSetWinner,
   hostShiftEnd,
   hostSkip,
@@ -42,7 +43,7 @@ type AdminPlayer = {
 
 export interface AdminData {
   token: string;
-  game: { id: string; name: string; status: string; targetEndAt: string | null; winnerId: string | null; defaultDuration: number };
+  game: { id: string; name: string; status: string; targetEndAt: string | null; winnerId: string | null; defaultDuration: number; barTabOpen: boolean };
   players: AdminPlayer[];
   disputes: { id: string; text: string }[];
   alerts: { id: string; text: string; at: string }[];
@@ -68,6 +69,7 @@ export function AdminView({ data }: { data: AdminData }) {
 
       <Controls data={data} />
       {(data.disputes.length > 0 || data.alerts.length > 0) && <Alerts data={data} />}
+      {g.status !== "ended" && <BarTab token={t} open={g.barTabOpen} />}
       <Broadcast token={t} />
       <Players data={data} />
       <WalkIn token={t} />
@@ -194,6 +196,37 @@ function Alerts({ data }: { data: AdminData }) {
           <span className="muted">{time(al.at)}</span> {al.text}
         </p>
       ))}
+      <Flash result={a.result} />
+    </section>
+  );
+}
+
+function BarTab({ token, open }: { token: string; open: boolean }) {
+  const [confirm, setConfirm] = useState(false);
+  const a = useAction();
+  return (
+    <section className="card">
+      <div className="row spread wrap">
+        <div>
+          <h3>🍺 Bar tab: {open ? "open" : "closed"}</h3>
+          <p className="muted small">
+            {open ? "Each catch earns a beer, shot, or mocktail (honor system)." : "Players see that catches no longer earn drinks."}
+          </p>
+        </div>
+        {open ? (
+          <Btn
+            kind="danger"
+            pending={a.pending}
+            onClick={() => (confirm ? a.run(() => hostSetBarTab(token, false), () => setConfirm(false)) : setConfirm(true))}
+          >
+            {confirm ? "Tap again: tab is finished" : "Close the tab"}
+          </Btn>
+        ) : (
+          <Btn kind="ghost" pending={a.pending} onClick={() => a.run(() => hostSetBarTab(token, true))}>
+            Reopen
+          </Btn>
+        )}
+      </div>
       <Flash result={a.result} />
     </section>
   );

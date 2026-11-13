@@ -49,7 +49,7 @@ export default async function PlayerPage({ params }: PageProps<"/p/[token]">) {
       status: game.status,
       targetEndAt: game.targetEndAt?.toISOString() ?? null,
       winnerName: game.winnerId ? (byId.get(game.winnerId)?.first_name ?? null) : null,
-      settings: { bonusAt: game.settings.bonusAccusationAtKills },
+      settings: { bonusAt: game.settings.bonusAccusationAtKills, barTabOpen: game.settings.barTabOpen },
     },
     target: target
       ? { id: target.id, firstName: target.first_name, photoUrl: target.photo_url, how: target.how_know_afam }

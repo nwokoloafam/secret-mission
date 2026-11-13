@@ -26,7 +26,7 @@ const RULES: [string, string][] = [
   ["🔄", "One task swap if yours is too awkward."],
   ["⏸️", "Embassy closed = game paused. No catching."],
   ["⚖️", "Afam settles every dispute."],
-  ["🍹", "No task ever needs a drink."],
+  ["🍺", "Every catch = a beer, shot, or mocktail on Afam's tab, until it's finished. Honor system!"],
 ];
 
 export default function HowToPlay() {
