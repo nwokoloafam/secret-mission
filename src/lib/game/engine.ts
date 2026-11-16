@@ -259,6 +259,7 @@ export function checkIn(state: GameState, ctx: Ctx, playerId: string): ActionRes
 function joinCutoffReached(d: Draft): boolean {
   const s = d.settings;
   if (d.alive().length <= s.joinCutoffPlayers) return true;
+  if (!s.joinCutoffMinutes) return false; // no time limit
   const started = d.game.startedAt;
   return !!started && d.now.getTime() - started.getTime() >= s.joinCutoffMinutes * 60_000;
 }

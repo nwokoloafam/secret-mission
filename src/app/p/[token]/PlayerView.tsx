@@ -17,7 +17,7 @@ import {
   updatePhoto,
 } from "@/app/actions";
 import { ACCESSORIES, COPY, TOP_COLORS } from "@/lib/copy";
-import { AutoRefresh, Avatar, Btn, Countdown, Flash, SaveLink, shrinkImage, useAction } from "@/components/ui";
+import { AutoRefresh, Avatar, Btn, Countdown, Flash, PhotoPicker, SaveLink, useAction } from "@/components/ui";
 
 type Person = { id: string; firstName: string; photoUrl: string | null };
 
@@ -48,7 +48,7 @@ export interface PlayerViewData {
     status: string;
     targetEndAt: string | null;
     winnerName: string | null;
-    settings: { bonusAt: number; barTabOpen: boolean };
+    settings: { bonusAt: number; barTabOpen: boolean; joinCutoff: number };
   };
   target: (Person & { how: string | null }) | null;
   mission: string | null;
@@ -130,6 +130,15 @@ export function PlayerView({ data }: { data: PlayerViewData }) {
         </div>
       )}
 
+      {me.status === "checked_in" && running && (
+        <div className="card">
+          <h3>You made it for the finale 🍿</h3>
+          <p className="muted">
+            The game is already down to its final {game.settings.joinCutoff} players, so new arrivals watch from the sidelines. You
+            can still bet on the winner and send one anonymous tip.
+          </p>
+        </div>
+      )}
       {ghost && <GhostActions data={data} />}
 
       {running && data.outNames.length > 0 && (
@@ -598,15 +607,10 @@ function PhotoUpdate({ data }: { data: PlayerViewData }) {
   return (
     <details className="card" open={missing && data.game.status !== "ended"}>
       <summary>{missing ? "⚠️ Add your photo so your hunter can find you" : "Change your photo (one in tonight's outfit helps)"}</summary>
-      <input
-        type="file"
-        accept="image/*"
-        onChange={async (e) => {
-          const f = e.target.files?.[0];
-          if (!f) return;
-          const small = await shrinkImage(f);
+      <PhotoPicker
+        onPick={(f) => {
           const fd = new FormData();
-          fd.set("photo", small);
+          fd.set("photo", f);
           a.run(() => updatePhoto(data.token, fd));
         }}
       />

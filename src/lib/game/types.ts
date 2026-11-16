@@ -20,7 +20,9 @@ export interface Settings {
   shieldMinutes: number;
   bonusAccusationAtKills: number;
   spliceFallbackMinutes: number;
+  /** Late arrivals can join while MORE than this many players are still in. */
   joinCutoffPlayers: number;
+  /** Minutes after start when joining closes. 0 = no time limit. */
   joinCutoffMinutes: number;
   /** Hard missions only get handed out once this many players (or fewer) are alive. */
   hardMissionsAtAlive: number;
@@ -35,8 +37,8 @@ export const DEFAULT_SETTINGS: Settings = {
   shieldMinutes: 10,
   bonusAccusationAtKills: 3,
   spliceFallbackMinutes: 5,
-  joinCutoffPlayers: 5,
-  joinCutoffMinutes: 90,
+  joinCutoffPlayers: 6,
+  joinCutoffMinutes: 0,
   hardMissionsAtAlive: 5,
   silentFinal: false,
   barTabOpen: true,

@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { ReactNode, useEffect, useState, useTransition } from "react";
+import { ReactNode, useEffect, useRef, useState, useTransition } from "react";
 import type { Result } from "@/app/actions";
 
 /** Re-fetches the page every few seconds so everyone sees changes live. Optionally runs the timer tick. */
@@ -139,6 +139,30 @@ export function SaveLink({ token }: { token: string }) {
         )}
       </div>
       {msg && <p className="flash ok">{msg}</p>}
+    </div>
+  );
+}
+
+/**
+ * Two ways to add a photo: open the front camera straight away, or pick one
+ * from the library. Hands back a shrunk JPEG.
+ */
+export function PhotoPicker({ onPick }: { onPick: (file: File) => void }) {
+  const camera = useRef<HTMLInputElement>(null);
+  const library = useRef<HTMLInputElement>(null);
+  async function handle(e: React.ChangeEvent<HTMLInputElement>) {
+    const f = e.target.files?.[0];
+    e.target.value = "";
+    if (f) onPick(await shrinkImage(f));
+  }
+  return (
+    <div className="row wrap">
+      <Btn onClick={() => camera.current?.click()}>📸 Take a selfie</Btn>
+      <Btn kind="ghost" onClick={() => library.current?.click()}>
+        Choose from library
+      </Btn>
+      <input ref={camera} type="file" accept="image/*" capture="user" hidden onChange={handle} />
+      <input ref={library} type="file" accept="image/*" hidden onChange={handle} />
     </div>
   );
 }

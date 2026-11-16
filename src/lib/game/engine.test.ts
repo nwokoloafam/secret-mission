@@ -311,11 +311,19 @@ describe("late arrivals", () => {
     expectOneLoop(s);
   });
 
-  it("become spectators after the join cutoff", () => {
+  it("can still join hours in (no time limit)", () => {
     const s0 = setup(8);
     s0.players.push(player(99, { status: "registered" }));
     let s = startGame(s0, ctx()).state;
-    s = checkIn(s, ctx(91), "p99").state;
+    s = checkIn(s, ctx(240), "p99").state;
+    expect(P(s, "p99").status).toBe("queued");
+  });
+
+  it("become spectators once it's down to the final 6", () => {
+    const s0 = setup(6);
+    s0.players.push(player(99, { status: "registered" }));
+    let s = startGame(s0, ctx()).state;
+    s = checkIn(s, ctx(10), "p99").state;
     expect(P(s, "p99").status).toBe("checked_in");
   });
 });

@@ -26,6 +26,10 @@ Locked-in changes on top of `../plan-overview.md`. This is the source of truth f
 ## Kill stories
 - **Dropped.** No "tell the story" prompt after a catch (decided Nov 15). The reveal shows the kill chain without stories.
 
+## Late arrivals
+- **No time limit to join.** Late arrivals tap "I'm here" and join the loop at the next catch (or within 5 minutes).
+- **Joining closes at the final 6.** Once 6 or fewer players are left, new arrivals become spectators (they can bet and send a tip). Decided Nov 15; replaces the original "~5 players or 90 minutes" cutoff.
+
 ## Drinks
 - **Every catch earns a beer, a shot, or a mocktail on Afam's bar tab.** Correct accusations count as catches.
 - **Honor system:** players tell the bartender; nothing in the app tracks it. (A phone voucher with a "Redeem" button was considered and parked for later.)

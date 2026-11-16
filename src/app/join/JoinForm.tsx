@@ -2,26 +2,18 @@
 
 import { useActionState, useState } from "react";
 import { signUp } from "@/app/actions";
-import { shrinkImage } from "@/components/ui";
+import { PhotoPicker } from "@/components/ui";
 
 export function JoinForm() {
   const [state, action, pending] = useActionState(signUp, null);
   const [preview, setPreview] = useState<string | null>(null);
   const [photo, setPhoto] = useState<File | null>(null);
 
-  async function onPhoto(e: React.ChangeEvent<HTMLInputElement>) {
-    const f = e.target.files?.[0];
-    if (!f) return;
-    const small = await shrinkImage(f);
-    setPhoto(small);
-    setPreview(URL.createObjectURL(small));
-  }
 
   return (
     <form
       className="card"
       action={(fd) => {
-        fd.delete("photoPicker");
         if (photo) fd.set("photo", photo);
         return action(fd);
       }}
@@ -34,10 +26,17 @@ export function JoinForm() {
         How do you know Afam?
         <input name="how" placeholder="College, work, family…" required maxLength={40} />
       </label>
-      <label>
-        A clear photo of your face (so your hunter can find you)
-        <input name="photoPicker" type="file" accept="image/*" onChange={onPhoto} />
-      </label>
+      <div className="stack">
+        <span className="muted" style={{ fontSize: 14 }}>
+          A clear photo of your face (so your hunter can find you)
+        </span>
+        <PhotoPicker
+          onPick={(f) => {
+            setPhoto(f);
+            setPreview(URL.createObjectURL(f));
+          }}
+        />
+      </div>
       {preview && (
         // eslint-disable-next-line @next/next/no-img-element
         <img src={preview} alt="Your photo" className="target-photo" style={{ maxWidth: 200 }} />
