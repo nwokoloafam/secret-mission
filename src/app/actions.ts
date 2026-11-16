@@ -333,6 +333,17 @@ export async function hostSetBarTab(admin: string, open: boolean): Promise<Resul
   });
 }
 
+export async function hostPlayAgain(admin: string): Promise<Result> {
+  return wrap(async () => {
+    const g = await asHost(admin);
+    await runAction(g.id, E.resetGame);
+    // Last round's clues and disputes don't carry over.
+    await db()`delete from hints where game_id = ${g.id}`;
+    await db()`update disputes set status = 'rejected' where game_id = ${g.id} and status = 'open'`;
+    return { ok: true, message: "New round ready. Everyone is checked back in. Tap Start game when ready." };
+  });
+}
+
 export async function hostSetWinner(admin: string, playerId: string): Promise<Result> {
   return wrap(async () => void (await host(admin, (s, c) => E.setWinner(s, c, playerId))));
 }

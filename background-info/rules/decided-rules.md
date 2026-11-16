@@ -23,6 +23,9 @@ Locked-in changes on top of `../plan-overview.md`. This is the source of truth f
 - Removing a player is **not** a kill: no one gets kill credit.
 - Removed players show up in the end reveal as "left early."
 
+## Kill stories
+- **Dropped.** No "tell the story" prompt after a catch (decided Nov 15). The reveal shows the kill chain without stories.
+
 ## Drinks
 - **Every catch earns a beer, a shot, or a mocktail on Afam's bar tab.** Correct accusations count as catches.
 - **Honor system:** players tell the bartender; nothing in the app tracks it. (A phone voucher with a "Redeem" button was considered and parked for later.)

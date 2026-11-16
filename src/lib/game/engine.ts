@@ -491,6 +491,48 @@ export function endGame(state: GameState, ctx: Ctx): ActionResult {
   return d.result();
 }
 
+/**
+ * "Play again with the same players": put an ended game back to the start.
+ * Everyone who played (or was waiting) is checked back in with the same
+ * personal link; people who left the party stay out. Afam then hits Start.
+ */
+export function resetGame(state: GameState, ctx: Ctx): ActionResult {
+  const d = new Draft(state, ctx);
+  if (d.game.status !== "ended") throw new GameError("not_ended", "End the game before starting a new round.");
+  for (const p of d.state.players) {
+    if (["alive", "eliminated", "queued", "checked_in"].includes(p.status)) p.status = "checked_in";
+    p.code = null;
+    p.targetId = null;
+    p.missionId = null;
+    p.missionsSeen = [];
+    p.rerollsLeft = 1;
+    p.accusationsUsed = 0;
+    p.bonusAccusationEarned = false;
+    p.killCount = 0;
+    p.lastKillAt = null;
+    p.hintTierRevealed = 0;
+    p.graceUntil = null;
+    p.shieldUntil = null;
+    p.queuedAt = null;
+    if (p.status !== "left") {
+      p.outAt = null;
+      p.outReason = null;
+      p.outBy = null;
+    }
+    p.betOnId = null;
+    p.poltergeistUsed = false;
+  }
+  d.game.status = "setup";
+  d.game.startedAt = null;
+  d.game.targetEndAt = null;
+  d.game.pausedAt = null;
+  d.game.endedAt = null;
+  d.game.winnerId = null;
+  d.event("reset", null, null, { players: d.state.players.filter((p) => p.status === "checked_in").length });
+  d.notify(null, "game_started");
+  return d.result();
+}
+
 /** Afam picks the winner when the game ended with nobody on any kills. */
 export function setWinner(state: GameState, ctx: Ctx, playerId: string): ActionResult {
   const d = new Draft(state, ctx);

@@ -11,6 +11,7 @@ import {
   hostEnd,
   hostMove,
   hostPause,
+  hostPlayAgain,
   hostRemove,
   hostResolveDispute,
   hostResume,
@@ -84,6 +85,7 @@ function Controls({ data }: { data: AdminData }) {
   const t = data.token;
   const [mins, setMins] = useState(String(g.defaultDuration));
   const [confirmEnd, setConfirmEnd] = useState(false);
+  const [confirmAgain, setConfirmAgain] = useState(false);
   const a = useAction();
   const c = data.counts;
   return (
@@ -140,7 +142,7 @@ function Controls({ data }: { data: AdminData }) {
           <Btn
             kind="danger"
             pending={a.pending}
-            onClick={() => (confirmEnd ? a.run(() => hostEnd(t)) : setConfirmEnd(true))}
+            onClick={() => (confirmEnd ? a.run(() => hostEnd(t), () => setConfirmEnd(false)) : setConfirmEnd(true))}
           >
             {confirmEnd ? "Tap again to end the game" : "End game now"}
           </Btn>
@@ -152,6 +154,18 @@ function Controls({ data }: { data: AdminData }) {
           <Link href={`/reveal/${g.id}`} className="btn primary" style={{ textDecoration: "none", textAlign: "center" }}>
             Open the reveal (good for the TV)
           </Link>
+          <Btn
+            kind="ghost"
+            pending={a.pending}
+            onClick={() => (confirmAgain ? a.run(() => hostPlayAgain(t), () => setConfirmAgain(false)) : setConfirmAgain(true))}
+          >
+            {confirmAgain ? "Tap again: new round, same players" : "🔁 Play again with the same players"}
+          </Btn>
+          {confirmAgain && (
+            <p className="muted small">
+              Clears this round&apos;s targets, kills and reveal. Everyone keeps their link and is checked back in. People who left stay out.
+            </p>
+          )}
           {!g.winnerId && (
             <>
               <p className="muted small">No one had any kills, so pick the winner:</p>

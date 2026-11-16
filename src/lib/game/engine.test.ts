@@ -9,6 +9,7 @@ import {
   placeBet,
   poltergeist,
   removePlayer,
+  resetGame,
   reroll,
   resumeGame,
   startGame,
@@ -366,6 +367,36 @@ describe("ending", () => {
     const s = endGame(started(5), ctx(20)).state;
     expect(s.game.status).toBe("ended");
     expect(s.game.winnerId).toBeNull();
+  });
+});
+
+describe("play again", () => {
+  it("resets an ended game with the same players, keeping leavers out", () => {
+    let s = started(6);
+    s = kill(s, "p0").state;
+    const leaver = s.players.find((p) => p.status === "alive" && p.id !== "p0")!.id;
+    s = removePlayer(s, ctx(3), leaver, "left").state;
+    s = endGame(s, ctx(10)).state;
+    const r = resetGame(s, ctx(11));
+    const st = r.state;
+    expect(st.game.status).toBe("setup");
+    expect(st.game.winnerId).toBeNull();
+    expect(P(st, leaver).status).toBe("left");
+    const back = st.players.filter((p) => p.status === "checked_in");
+    expect(back).toHaveLength(5);
+    back.forEach((p) => {
+      expect(p.killCount).toBe(0);
+      expect(p.targetId).toBeNull();
+      expect(p.code).toBeNull();
+    });
+    // and a new round starts cleanly
+    const s2 = startGame(st, ctx(12)).state;
+    expectOneLoop(s2);
+    expect(s2.players.filter((p) => p.status === "alive")).toHaveLength(5);
+  });
+
+  it("only works once the game has ended", () => {
+    expectError(() => resetGame(started(4), ctx(1)), "not_ended");
   });
 });
 

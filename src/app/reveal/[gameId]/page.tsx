@@ -23,7 +23,9 @@ export default async function RevealPage({ params }: PageProps<"/reveal/[gameId]
   }
 
   const [players, eventsDesc] = await Promise.all([playersOf(game.id), eventsOf(game.id, 2000)]);
-  const events = [...eventsDesc].reverse();
+  // Only this round: skip everything before the most recent "Play again".
+  const lastReset = eventsDesc.find((e) => e.type === "reset");
+  const events = [...eventsDesc].reverse().filter((e) => !lastReset || Number(e.id) > Number(lastReset.id));
   const byId = new Map(players.map((p) => [p.id, p]));
   const name = (id: string | null) => (id ? (byId.get(id)?.first_name ?? "?") : "?");
   const winner = game.winnerId ? byId.get(game.winnerId) : undefined;

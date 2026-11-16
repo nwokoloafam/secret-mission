@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useCallback, useState } from "react";
 import {
   accuseAction,
-  addKillStoryAction,
   betAction,
   cantFindAction,
   checkInAction,
@@ -241,11 +240,8 @@ function Alive({ data }: { data: PlayerViewData }) {
   const { me, target } = data;
   const paused = data.game.status === "paused";
   const [code, setCode] = useState("");
-  const [lastVictim, setLastVictim] = useState<string | null>(null);
-  const [story, setStory] = useState("");
   const [showCode, setShowCode] = useState(false);
   const kill = useAction();
-  const storyA = useAction();
   const reroll = useAction();
   const misc = useAction();
 
@@ -262,31 +258,6 @@ function Alive({ data }: { data: PlayerViewData }) {
         </p>
       )}
 
-      {lastVictim && (
-        <div className="card highlight">
-          <h3>Nice work. Tell the story?</h3>
-          <p className="muted small">One line, read out at the end reveal.</p>
-          <input value={story} onChange={(e) => setStory(e.target.value)} maxLength={280} placeholder="How'd you do it?" />
-          <div className="row">
-            <Btn
-              pending={storyA.pending}
-              onClick={() =>
-                storyA.run(
-                  () => addKillStoryAction(data.token, lastVictim, story),
-                  (r) => r.ok && setLastVictim(null),
-                )
-              }
-            >
-              Save story
-            </Btn>
-            <Btn kind="ghost" onClick={() => setLastVictim(null)}>
-              Skip
-            </Btn>
-          </div>
-          <Flash result={storyA.result} />
-        </div>
-      )}
-      {!lastVictim && storyA.result?.ok && <Flash result={storyA.result} />}
 
       {target ? (
         <div className="card highlight">
@@ -346,11 +317,7 @@ function Alive({ data }: { data: PlayerViewData }) {
               kill.run(
                 () => submitKillAction(data.token, code),
                 (r) => {
-                  if (r.ok) {
-                    setCode("");
-                    setLastVictim((r.data?.victimId as string) ?? null);
-                    setStory("");
-                  }
+                  if (r.ok) setCode("");
                 },
               )
             }
