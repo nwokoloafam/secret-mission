@@ -26,7 +26,7 @@ function Step({ n, title, caption, children }: { n: number; title: string; capti
 const RULES: [string, string][] = [
   ["🤝", "Caught? Hand over your code. No arguing."],
   ["🙅", "Guests only. No bar staff or strangers."],
-  ["⚡", "One bonus move: swap your task or guess your hunter."],
+  ["⚡", "1 bonus action per game: guess your hunter or swap your task."],
   ["⏸️", "Embassy closed = game paused. No catching."],
   ["⚖️", "Afam settles every dispute."],
   ["🍺", "Every catch = a beer, shot, or mocktail on Afam's tab, until it's finished. Honor system!"],
@@ -52,21 +52,18 @@ export function HowToPlaySteps({ skipCheckIn = false }: { skipCheckIn?: boolean 
       </Step>
       <Step
         n={n(5)}
-        title="Guess who's hunting you"
+        title="Bonus actions"
         caption={
           <div className="stack small" style={{ gap: 6 }}>
-            <p className="muted">
-              Someone has <em>you</em> as their target, and they know who you are. You don&apos;t know who they are. Think
-              you&apos;ve spotted them? Guess in the app.
+            <p>
+              There are <strong>2 bonus actions</strong>. You can use <strong>only 1</strong> per game.
             </p>
             <p>
-              <span style={{ color: "var(--ok)" }}>✓ Right:</span> they&apos;re out, and it counts as your catch.
+              <strong>1. Guess who&apos;s hunting you.</strong> <span style={{ color: "var(--ok)" }}>Right:</span> they&apos;re out
+              and it counts as your catch. <span style={{ color: "var(--danger)" }}>Wrong:</span> nothing happens.
             </p>
             <p>
-              <span style={{ color: "var(--danger)" }}>✗ Wrong:</span> nothing happens, but you&apos;ve used your bonus move.
-            </p>
-            <p className="muted">
-              ⚡ Everyone gets <strong>one bonus move</strong> per game: swap your task <em>or</em> guess your hunter.
+              <strong>2. Swap your task</strong> for a new one.
             </p>
           </div>
         }

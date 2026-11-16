@@ -40,8 +40,8 @@ Locked-in changes on top of `../plan-overview.md`. This is the source of truth f
 - No task ever requires drinking.
 
 ## Missions
-- **Task swaps are part of the bonus move** (see below). Self-serve, no need to ask Afam.
-- **Afam's skip is the backstop:** if a player has used their bonus move and is still stuck (target left, mission doesn't fit), Afam can skip the mission from admin.
+- **Task swaps are a bonus action** (see below). Self-serve, no need to ask Afam.
+- **Afam's skip is the backstop:** if a player has used their bonus action and is still stuck (target left, mission doesn't fit), Afam can skip the mission from admin.
 
 ## Pause
 - Afam can pause and resume from admin.
@@ -55,13 +55,11 @@ Locked-in changes on top of `../plan-overview.md`. This is the source of truth f
 ## Code leaking
 - Ignored. Someone could tell a friend their code early, but it's unlikely at a friendly party.
 
-## Bonus move (decided Nov 16)
-- Each player gets **one bonus move per game**. Using it on either option uses it up:
-  1. **Swap your task.**
-  2. **Guess your hunter.** Pick who you think has you as their target.
-     - **Right:** your hunter is out and it counts as your catch; their hunter now hunts you. No shield (removed Nov 16).
-     - **Wrong:** nothing happens, except the bonus move is gone.
-  3. *(Draft, not built)* **Team up.** See `team-up-draft.md`.
+## Bonus actions (decided Nov 16)
+- There are **2 bonus actions**. Each player can use **only 1 per game**:
+  1. **Guess who's hunting you.** Right: your hunter is out and it counts as your catch; their hunter now hunts you. Wrong: nothing happens. No shield.
+  2. **Swap your task** for a new one.
+- *(Draft, not built)* A third, **Team up**, is in `team-up-draft.md`.
 - Replaces: 1 accusation + 1 bonus accusation at 3 catches, a separate task swap, and hints to the hunter on a wrong guess.
 
 ## Custom hints

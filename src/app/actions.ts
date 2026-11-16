@@ -147,14 +147,14 @@ export async function accuseAction(token: string, suspectId: string): Promise<Re
           ok: true,
           message: `You caught your hunter! They're out, and it counts as your catch.${r.state.game.settings.barTabOpen ? " 🍺 Drink's on Afam's tab." : ""}`,
         }
-      : { ok: true, message: "Wrong guess. Nothing happens, but your bonus move is used up." };
+      : { ok: true, message: "Wrong guess. Nothing happens, but your bonus action is used up." };
   });
 }
 
 export async function rerollAction(token: string): Promise<Result> {
   return wrap(async () => {
     await play(token, (s, c, id) => E.reroll(s, c, id));
-    return { ok: true, message: "New task assigned. That was your bonus move." };
+    return { ok: true, message: "New task assigned. That was your bonus action." };
   });
 }
 

@@ -192,7 +192,7 @@ export function LoopArt() {
   );
 }
 
-/** 5. Someone is hunting you. Guess who: right = they're out; wrong = nothing (bonus move spent). */
+/** 5. Someone is hunting you. Guess who: right = they're out; wrong = nothing (bonus action spent). */
 export function AccuseArt() {
   return (
     <svg viewBox="0 0 300 180" style={frame} role="img" aria-label="Guess who is hunting you. Right: they are out. Wrong: nothing happens.">
@@ -221,7 +221,7 @@ export function AccuseArt() {
           Wrong guess
         </text>
         <text x="42" y="41" fontSize="11" fill={INK}>
-          nothing happens
+          no effect
         </text>
       </g>
     </svg>

@@ -398,8 +398,8 @@ function BonusMove({ data }: { data: PlayerViewData }) {
   if (data.me.bonusUsed) {
     return (
       <div className="card">
-        <p className="eyebrow">⚡ Bonus move</p>
-        <p className="muted small">You&apos;ve used your bonus move for this game.</p>
+        <p className="eyebrow">⚡ Bonus action</p>
+        <p className="muted small">You&apos;ve used your bonus action for this game.</p>
         <Flash result={a.result} />
       </div>
     );
@@ -408,23 +408,23 @@ function BonusMove({ data }: { data: PlayerViewData }) {
   return (
     <div className="card">
       <div>
-        <p className="eyebrow">⚡ Bonus move · 1 per game</p>
-        <p className="muted small">Pick one. Using either one uses it up.</p>
+        <p className="eyebrow">⚡ Bonus actions</p>
+        <p className="muted small">2 options. You can use only 1 per game.</p>
       </div>
       {mode === "choose" ? (
         <div className="row wrap">
-          <Btn kind="ghost" pending={a.pending} disabled={paused} onClick={() => a.run(() => rerollAction(data.token))}>
-            🔄 Swap my task
-          </Btn>
           <Btn kind="ghost" disabled={paused} onClick={() => setMode("guess")}>
-            🕵️ Guess my hunter
+            1. 🕵️ Guess my hunter
+          </Btn>
+          <Btn kind="ghost" pending={a.pending} disabled={paused} onClick={() => a.run(() => rerollAction(data.token))}>
+            2. 🔄 Swap my task
           </Btn>
         </div>
       ) : (
         <>
           <p className="small">
             Who has <em>you</em> as their target? <span style={{ color: "var(--ok)" }}>Right:</span> they&apos;re out and it
-            counts as your catch. <span style={{ color: "var(--danger)" }}>Wrong:</span> nothing happens, but your bonus move
+            counts as your catch. <span style={{ color: "var(--danger)" }}>Wrong:</span> nothing happens, but your bonus action
             is gone.
           </p>
           <div className="photo-grid">

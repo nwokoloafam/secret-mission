@@ -340,7 +340,7 @@ export function accuse(state: GameState, ctx: Ctx, accuserId: string, suspectId:
   d.requireActive();
   const accuser = d.player(accuserId);
   d.requireAlive(accuser);
-  if (bonusMoveUsed(accuser)) throw new GameError("no_bonus", "You've already used your bonus move.");
+  if (bonusMoveUsed(accuser)) throw new GameError("no_bonus", "You've already used your bonus action.");
   if (suspectId === accuserId) throw new GameError("self", "You can't accuse yourself.");
   const suspect = d.player(suspectId);
   if (suspect.status !== "alive") throw new GameError("suspect_out", "That player isn't in the game.");
@@ -359,14 +359,14 @@ export function accuse(state: GameState, ctx: Ctx, accuserId: string, suspectId:
     d.spliceQueuedAfterKill(accuser);
     d.endIfOver();
   } else {
-    // Wrong: nothing happens, except the bonus move is spent.
+    // Wrong: nothing happens, except the bonus action is spent.
     d.event("accuse_wrong", accuser.id, suspect.id);
   }
   return d.result();
 }
 
 /**
- * Each player gets ONE bonus move per game: swap their task OR guess their
+ * Each player gets ONE bonus action per game: guess their hunter OR swap their
  * hunter. Using either uses it up.
  */
 export function bonusMoveUsed(p: Player): boolean {
@@ -379,7 +379,7 @@ export function reroll(state: GameState, ctx: Ctx, playerId: string): ActionResu
   d.requireActive();
   const p = d.player(playerId);
   d.requireAlive(p);
-  if (bonusMoveUsed(p)) throw new GameError("no_bonus", "You've already used your bonus move.");
+  if (bonusMoveUsed(p)) throw new GameError("no_bonus", "You've already used your bonus action.");
   p.rerollsLeft -= 1;
   d.assignMission(p);
   d.event("reroll", p.id, null, { missionId: p.missionId });
