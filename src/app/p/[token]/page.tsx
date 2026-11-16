@@ -42,6 +42,7 @@ export default async function PlayerPage({ params }: PageProps<"/p/[token]">) {
       outReason: me.out_reason,
       outByName: me.out_by ? (byId.get(me.out_by)?.first_name ?? null) : null,
       betOnName: me.bet_on_id ? (byId.get(me.bet_on_id)?.first_name ?? null) : null,
+      betOnPhoto: me.bet_on_id ? (byId.get(me.bet_on_id)?.photo_url ?? null) : null,
       poltergeistUsed: me.poltergeist_used,
     },
     game: {

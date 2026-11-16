@@ -40,6 +40,7 @@ export interface PlayerViewData {
     outReason: string | null;
     outByName: string | null;
     betOnName: string | null;
+    betOnPhoto: string | null;
     poltergeistUsed: boolean;
   };
   game: {
@@ -487,6 +488,20 @@ function Leave({ token }: { token: string }) {
 
 // ─────────────────────────────────────────────
 
+/** Square photo (or first initial if there's no photo). Fills its box unless a size is given. */
+function Photo({ url, name, size }: { url: string | null; name: string; size?: number }) {
+  const style = size ? { width: size, height: size, flex: "none" as const } : undefined;
+  if (url) {
+    // eslint-disable-next-line @next/next/no-img-element
+    return <img src={url} alt={name} className="photo-sq" style={style} />;
+  }
+  return (
+    <div className="photo-sq placeholder" style={style}>
+      {name.slice(0, 1).toUpperCase()}
+    </div>
+  );
+}
+
 function GhostActions({ data }: { data: PlayerViewData }) {
   const [bet, setBet] = useState<string | null>(null);
   const [to, setTo] = useState<string | null>(null);
@@ -499,15 +514,26 @@ function GhostActions({ data }: { data: PlayerViewData }) {
       <div className="card">
         <h3>Betting pool</h3>
         {data.me.betOnName ? (
-          <p className="muted">You bet on {data.me.betOnName}. Correct picks get a shout-out at the reveal.</p>
+          <div className="row">
+            <Photo url={data.me.betOnPhoto} name={data.me.betOnName} size={96} />
+            <p className="muted">
+              You bet on <strong style={{ color: "var(--ink)" }}>{data.me.betOnName}</strong>. Correct picks get a shout-out at
+              the reveal.
+            </p>
+          </div>
         ) : (
           <>
             <p className="muted small">Who gets the green card? One pick.</p>
-            <div className="list">
+            <div className="photo-grid">
               {everyone.map((p) => (
-                <button key={p.id} type="button" className={`pick ${bet === p.id ? "on" : ""}`} onClick={() => setBet(p.id)}>
-                  <Avatar url={p.photoUrl} name={p.firstName} size={32} />
-                  {p.firstName}
+                <button
+                  key={p.id}
+                  type="button"
+                  className={`photo-pick ${bet === p.id ? "on" : ""}`}
+                  onClick={() => setBet(p.id)}
+                >
+                  <Photo url={p.photoUrl} name={p.firstName} />
+                  <span>{p.firstName}</span>
                 </button>
               ))}
             </div>
