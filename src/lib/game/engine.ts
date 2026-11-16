@@ -352,7 +352,6 @@ export function accuse(state: GameState, ctx: Ctx, accuserId: string, suspectId:
     // Correct: hunter is out; their hunter now hunts the accuser.
     const nextHunter = d.takeOut(hunter, "accusation", accuser.id);
     d.creditKill(accuser);
-    accuser.shieldUntil = new Date(d.now.getTime() + d.settings.shieldMinutes * 60_000);
     d.event("accuse_right", accuser.id, hunter.id);
     d.notify(hunter.id, "eliminated");
     if (nextHunter && nextHunter.id !== accuser.id) d.newTarget(nextHunter);

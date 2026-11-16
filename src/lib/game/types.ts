@@ -17,7 +17,6 @@ export type HintSource = "group" | "outfit" | "custom" | "initial" | "poltergeis
 
 export interface Settings {
   graceMinutes: number;
-  shieldMinutes: number;
   bonusAccusationAtKills: number;
   spliceFallbackMinutes: number;
   /** Late arrivals can join while MORE than this many players are still in. */
@@ -34,7 +33,6 @@ export interface Settings {
 
 export const DEFAULT_SETTINGS: Settings = {
   graceMinutes: 10,
-  shieldMinutes: 10,
   bonusAccusationAtKills: 3,
   spliceFallbackMinutes: 5,
   joinCutoffPlayers: 6,

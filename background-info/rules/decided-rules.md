@@ -59,7 +59,7 @@ Locked-in changes on top of `../plan-overview.md`. This is the source of truth f
 - Each player gets **one bonus move per game**. Using it on either option uses it up:
   1. **Swap your task.**
   2. **Guess your hunter.** Pick who you think has you as their target.
-     - **Right:** your hunter is out and it counts as your catch; their hunter now hunts you. (You also get the 10-minute shield, as before. Open question: keep it?)
+     - **Right:** your hunter is out and it counts as your catch; their hunter now hunts you. No shield (removed Nov 16).
      - **Wrong:** nothing happens, except the bonus move is gone.
   3. *(Draft, not built)* **Team up.** See `team-up-draft.md`.
 - Replaces: 1 accusation + 1 bonus accusation at 3 catches, a separate task swap, and hints to the hunter on a wrong guess.

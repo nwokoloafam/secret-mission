@@ -145,7 +145,7 @@ export async function accuseAction(token: string, suspectId: string): Promise<Re
     return right
       ? {
           ok: true,
-          message: `You caught your hunter! They're out, and you're shielded for 10 minutes.${r.state.game.settings.barTabOpen ? " 🍺 Drink's on Afam's tab." : ""}`,
+          message: `You caught your hunter! They're out, and it counts as your catch.${r.state.game.settings.barTabOpen ? " 🍺 Drink's on Afam's tab." : ""}`,
         }
       : { ok: true, message: "Wrong guess. Nothing happens, but your bonus move is used up." };
   });

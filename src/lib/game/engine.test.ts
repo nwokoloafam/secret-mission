@@ -209,7 +209,7 @@ describe("kills", () => {
 });
 
 describe("accusations", () => {
-  it("correct guess: hunter out, accuser gets a kill and a shield", () => {
+  it("correct guess: hunter out, accuser gets a kill, no shield", () => {
     const s = started(6);
     const hunter = hunterOf(s, "p0");
     const grand = hunterOf(s, hunter.id);
@@ -218,14 +218,12 @@ describe("accusations", () => {
     expect(P(st, hunter.id).status).toBe("eliminated");
     expect(P(st, hunter.id).outReason).toBe("accusation");
     expect(P(st, "p0").killCount).toBe(1);
-    expect(P(st, "p0").shieldUntil).toEqual(min(15));
+    expect(P(st, "p0").shieldUntil).toBeNull();
     expect(P(st, grand.id).targetId).toBe("p0");
     expectOneLoop(st);
 
-    // Shield blocks kill codes...
-    expectError(() => submitKill(st, ctx(6), grand.id, P(st, "p0").code!), "protected");
-    // ...but not after it runs out.
-    expect(P(submitKill(st, ctx(16), grand.id, P(st, "p0").code!).state, "p0").status).toBe("eliminated");
+    // No protection: the new hunter can catch them right away.
+    expect(P(submitKill(st, ctx(6), grand.id, P(st, "p0").code!).state, "p0").status).toBe("eliminated");
   });
 
   it("wrong guess: nothing happens except the bonus move is spent", () => {
