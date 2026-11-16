@@ -20,7 +20,6 @@ import {
   OutReason,
   Player,
 } from "./types";
-import { nextHintFor } from "./hints";
 
 // ─────────────────────────────────────────────
 // Draft: a working copy of the state plus everything the action produced
@@ -165,7 +164,6 @@ class Draft {
   creditKill(killer: Player) {
     killer.killCount += 1;
     killer.lastKillAt = this.now;
-    if (killer.killCount >= this.settings.bonusAccusationAtKills) killer.bonusAccusationEarned = true;
   }
 
   /** After a kill, splice the first queued player in: killer → newcomer → killer's new target. */
@@ -342,8 +340,7 @@ export function accuse(state: GameState, ctx: Ctx, accuserId: string, suspectId:
   d.requireActive();
   const accuser = d.player(accuserId);
   d.requireAlive(accuser);
-  const allowed = 1 + (accuser.bonusAccusationEarned ? 1 : 0);
-  if (accuser.accusationsUsed >= allowed) throw new GameError("no_accusations", "You have no accusations left.");
+  if (bonusMoveUsed(accuser)) throw new GameError("no_bonus", "You've already used your bonus move.");
   if (suspectId === accuserId) throw new GameError("self", "You can't accuse yourself.");
   const suspect = d.player(suspectId);
   if (suspect.status !== "alive") throw new GameError("suspect_out", "That player isn't in the game.");
@@ -363,16 +360,18 @@ export function accuse(state: GameState, ctx: Ctx, accuserId: string, suspectId:
     d.spliceQueuedAfterKill(accuser);
     d.endIfOver();
   } else {
-    // Wrong: the accuser's real hunter gets a clue about the accuser.
+    // Wrong: nothing happens, except the bonus move is spent.
     d.event("accuse_wrong", accuser.id, suspect.id);
-    const hint = nextHintFor(d.state, accuser.id);
-    if (hint) {
-      accuser.hintTierRevealed = hint.nextTier;
-      d.hints.push({ toPlayerId: hunter.id, aboutPlayerId: accuser.id, source: hint.source, text: hint.text });
-      d.notify(hunter.id, "hint");
-    }
   }
   return d.result();
+}
+
+/**
+ * Each player gets ONE bonus move per game: swap their task OR guess their
+ * hunter. Using either uses it up.
+ */
+export function bonusMoveUsed(p: Player): boolean {
+  return p.rerollsLeft <= 0 || p.accusationsUsed > 0;
 }
 
 /** Player swaps their mission (once per game). */
@@ -381,7 +380,7 @@ export function reroll(state: GameState, ctx: Ctx, playerId: string): ActionResu
   d.requireActive();
   const p = d.player(playerId);
   d.requireAlive(p);
-  if (p.rerollsLeft <= 0) throw new GameError("no_rerolls", "You've already used your reroll.");
+  if (bonusMoveUsed(p)) throw new GameError("no_bonus", "You've already used your bonus move.");
   p.rerollsLeft -= 1;
   d.assignMission(p);
   d.event("reroll", p.id, null, { missionId: p.missionId });

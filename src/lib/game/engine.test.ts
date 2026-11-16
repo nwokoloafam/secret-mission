@@ -228,27 +228,26 @@ describe("accusations", () => {
     expect(P(submitKill(st, ctx(16), grand.id, P(st, "p0").code!).state, "p0").status).toBe("eliminated");
   });
 
-  it("wrong guess: uses the accusation and sends a hint to the real hunter", () => {
+  it("wrong guess: nothing happens except the bonus move is spent", () => {
     const s = started(6);
     const hunter = hunterOf(s, "p0");
     const wrong = s.players.find((p) => p.id !== "p0" && p.id !== hunter.id)!;
     const r = accuse(s, ctx(5), "p0", wrong.id);
-    expect(P(r.state, "p0").accusationsUsed).toBe(1);
-    expect(r.hints).toHaveLength(1);
-    expect(r.hints[0]).toMatchObject({ toPlayerId: hunter.id, aboutPlayerId: "p0", source: "outfit" });
-    expectError(() => accuse(r.state, ctx(6), "p0", hunter.id), "no_accusations");
+    expect(r.hints).toHaveLength(0);
+    expect(r.state.players.filter((p) => p.status === "alive")).toHaveLength(6);
+    expectError(() => accuse(r.state, ctx(6), "p0", hunter.id), "no_bonus");
+    expectError(() => reroll(r.state, ctx(6), "p0"), "no_bonus");
   });
 
-  it("earns a bonus accusation at 3 kills (accusations count)", () => {
+  it("no extra guess for making catches", () => {
     let s = started(10);
     s = kill(s, "p0").state;
     s = kill(s, "p0").state;
+    s = kill(s, "p0").state;
     const hunter = hunterOf(s, "p0");
-    s = accuse(s, ctx(5), "p0", hunter.id).state; // 3rd "kill"
-    expect(P(s, "p0").killCount).toBe(3);
-    expect(P(s, "p0").bonusAccusationEarned).toBe(true);
+    s = accuse(s, ctx(5), "p0", hunter.id).state;
     const wrong = s.players.find((p) => p.status === "alive" && p.id !== "p0" && p.id !== hunterOf(s, "p0").id)!;
-    expect(() => accuse(s, ctx(6), "p0", wrong.id)).not.toThrow();
+    expectError(() => accuse(s, ctx(6), "p0", wrong.id), "no_bonus");
   });
 
   it("with two left, a correct accusation wins", () => {
@@ -409,11 +408,12 @@ describe("play again", () => {
 });
 
 describe("other actions", () => {
-  it("one reroll per player", () => {
+  it("one bonus move: swapping your task uses up your guess too", () => {
     const s = started(5);
     const r = reroll(s, ctx(1), "p0");
     expect(P(r.state, "p0").missionId).not.toBe(P(s, "p0").missionId);
-    expectError(() => reroll(r.state, ctx(2), "p0"), "no_rerolls");
+    expectError(() => reroll(r.state, ctx(2), "p0"), "no_bonus");
+    expectError(() => accuse(r.state, ctx(2), "p0", hunterOf(r.state, "p0").id), "no_bonus");
   });
 
   it("ghosts can bet once and send one poltergeist hint", () => {

@@ -40,8 +40,8 @@ Locked-in changes on top of `../plan-overview.md`. This is the source of truth f
 - No task ever requires drinking.
 
 ## Missions
-- **One reroll per player.** Self-serve, no need to ask Afam.
-- **Afam's skip is the backstop:** if a player has used their reroll and is still stuck (target left, mission doesn't fit), Afam can skip the mission from admin.
+- **Task swaps are part of the bonus move** (see below). Self-serve, no need to ask Afam.
+- **Afam's skip is the backstop:** if a player has used their bonus move and is still stuck (target left, mission doesn't fit), Afam can skip the mission from admin.
 
 ## Pause
 - Afam can pause and resume from admin.
@@ -55,22 +55,23 @@ Locked-in changes on top of `../plan-overview.md`. This is the source of truth f
 ## Code leaking
 - Ignored. Someone could tell a friend their code early, but it's unlikely at a friendly party.
 
-## Counter-accusation
-- Each player gets **1 accusation per game**, plus **1 bonus accusation at 3 kills** (number adjustable).
-- You accuse by picking who you think is hunting you.
-- **Correct:** your hunter is eliminated; their hunter now hunts you.
-  - **Boost:** counts as a kill **and** you get a **10-minute shield**.
-  - The shield blocks **kill codes only**, not accusations.
-  - Correct accusations **count toward the 3-kill bonus** accusation.
-- **Wrong:** **hint to your hunter** (a clue about you). See `accusation-options.md` for how hints are picked.
+## Bonus move (decided Nov 16)
+- Each player gets **one bonus move per game**. Using it on either option uses it up:
+  1. **Swap your task.**
+  2. **Guess your hunter.** Pick who you think has you as their target.
+     - **Right:** your hunter is out and it counts as your catch; their hunter now hunts you. (You also get the 10-minute shield, as before. Open question: keep it?)
+     - **Wrong:** nothing happens, except the bonus move is gone.
+  3. *(Draft, not built)* **Team up.** See `team-up-draft.md`.
+- Replaces: 1 accusation + 1 bonus accusation at 3 catches, a separate task swap, and hints to the hunter on a wrong guess.
 
 ## Custom hints
 - Afam can write a **custom hint for each player** from admin, before or during the game.
-- If a player has one, it's used in the hint escalation (see `accusation-options.md`).
-- Afam can also send any player's custom hint to their hunter manually, at any time.
+- Afam can send any player's custom hint to their hunter, at any time (e.g. "they changed shirts").
+- Automatic hints were dropped (Nov 16): the hunter already has your name and photo, so clues added little.
 
 ## Ghosts (eliminated players)
 - **Betting pool:** ghosts pick who they think will win; correct picks get a shout-out at the reveal.
+- **Stats board ("Who's winning"):** ghosts see each remaining player's catch count, to bet with. Live players still can't see counts.
 - **Poltergeist:** each ghost can send one anonymous hint to any living player, true or a red herring.
 
 ## Not doing

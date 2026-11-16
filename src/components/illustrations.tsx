@@ -192,10 +192,10 @@ export function LoopArt() {
   );
 }
 
-/** 5. Someone is hunting you. Guess who: right = they're out + shield; wrong = they get a clue. */
+/** 5. Someone is hunting you. Guess who: right = they're out; wrong = nothing (bonus move spent). */
 export function AccuseArt() {
   return (
-    <svg viewBox="0 0 300 180" style={frame} role="img" aria-label="Guess who is hunting you. Right: they are out and you get a shield. Wrong: they get a clue about you.">
+    <svg viewBox="0 0 300 180" style={frame} role="img" aria-label="Guess who is hunting you. Right: they are out. Wrong: nothing happens.">
       <Person x={150} y={60} color={GOLD} label="you" />
       <g transform="translate(150 60)">
         <circle cx="-62" cy="-14" r="16" fill={PANEL} stroke={MUTED} strokeDasharray="3 3" />
@@ -207,21 +207,21 @@ export function AccuseArt() {
       <g transform="translate(14 112)">
         <rect x="0" y="0" width="128" height="58" rx="10" fill={PANEL} stroke={OK} />
         <path d="M14 30 l7 7 l13 -15" stroke={OK} strokeWidth="3.5" fill="none" strokeLinecap="round" strokeLinejoin="round" />
-        <text x="42" y="25" fontSize="11" fill={INK}>
-          they&apos;re out
+        <text x="42" y="25" fontSize="11" fontWeight="700" fill={OK}>
+          Right guess
         </text>
         <text x="42" y="41" fontSize="11" fill={INK}>
-          +1 & 🛡️ 10 min
+          they&apos;re out
         </text>
       </g>
       <g transform="translate(158 112)">
         <rect x="0" y="0" width="128" height="58" rx="10" fill={PANEL} stroke={BAD} />
         <path d="M16 20 l14 14 M30 20 l-14 14" stroke={BAD} strokeWidth="3.5" strokeLinecap="round" />
-        <text x="42" y="25" fontSize="11" fill={INK}>
-          wrong: your
+        <text x="42" y="25" fontSize="11" fontWeight="700" fill={BAD}>
+          Wrong guess
         </text>
         <text x="42" y="41" fontSize="11" fill={INK}>
-          hunter gets 🔎
+          nothing happens
         </text>
       </g>
     </svg>

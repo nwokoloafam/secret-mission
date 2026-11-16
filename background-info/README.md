@@ -5,7 +5,8 @@ Design notes for the Secret Mission game. Nothing in this folder is code or conf
 - `plan-overview.md`: summary of the original plan doc (Nov 5, 2026), with corrections
 - `rules/decided-rules.md`: rules we've locked in so far (source of truth for the build)
 - `rules/final-two-options.md`: every option considered for the final 2
-- `rules/accusation-options.md`: counter-accusation rules, all penalty and boost options, how hints are picked
+- `rules/accusation-options.md`: counter-accusation options considered (superseded by the bonus move, Nov 16)
+- `rules/team-up-draft.md`: the team-up idea, not built yet, with open questions
 - `rules/ghost-mode-options.md`: every idea for eliminated players
 - `rules/open-questions.md`: things still to decide
 - `theme-options.md`: theme (immigration/visa picked, name undecided) and other ideas

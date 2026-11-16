@@ -17,9 +17,10 @@ import {
   updatePhoto,
 } from "@/app/actions";
 import { ACCESSORIES, COPY, TOP_COLORS } from "@/lib/copy";
+import { HowToPlaySteps } from "@/components/HowToPlay";
 import { AutoRefresh, Avatar, Btn, Countdown, Flash, PhotoPicker, SaveLink, useAction } from "@/components/ui";
 
-type Person = { id: string; firstName: string; photoUrl: string | null };
+type Person = { id: string; firstName: string; photoUrl: string | null; kills?: number };
 
 export interface PlayerViewData {
   token: string;
@@ -29,9 +30,7 @@ export interface PlayerViewData {
     photoUrl: string | null;
     status: string;
     code: string | null;
-    rerollsLeft: number;
-    accusationsLeft: number;
-    bonusEarned: boolean;
+    bonusUsed: boolean;
     killCount: number;
     graceUntil: string | null;
     shieldUntil: string | null;
@@ -199,6 +198,10 @@ function Waiting({ data }: { data: PlayerViewData }) {
         <h3>You&apos;re checked in ✅</h3>
         <p className="muted">Waiting for {COPY.host} to start the game. This page updates on its own.</p>
       </div>
+      <p className="eyebrow" style={{ marginTop: 8 }}>
+        While you wait: how to play
+      </p>
+      <HowToPlaySteps skipCheckIn />
       <details className="card">
         <summary>Update your outfit</summary>
         <OutfitPicker color={color} setColor={setColor} acc={acc} setAcc={setAcc} />
@@ -252,7 +255,6 @@ function Alive({ data }: { data: PlayerViewData }) {
   const [code, setCode] = useState("");
   const [showCode, setShowCode] = useState(false);
   const kill = useAction();
-  const reroll = useAction();
   const misc = useAction();
 
   return (
@@ -356,22 +358,7 @@ function Alive({ data }: { data: PlayerViewData }) {
         </div>
       </div>
 
-      <div className="card">
-        <div className="row spread">
-          <h3>Task too awkward?</h3>
-          <Btn
-            kind="small"
-            pending={reroll.pending}
-            disabled={me.rerollsLeft <= 0 || paused}
-            onClick={() => reroll.run(() => rerollAction(data.token))}
-          >
-            {me.rerollsLeft > 0 ? "Swap task (1 left)" : "No swaps left"}
-          </Btn>
-        </div>
-        <Flash result={reroll.result} />
-      </div>
-
-      <Accuse data={data} />
+      <BonusMove data={data} />
 
       {data.hints.filter((h) => h.anonymous).length > 0 && (
         <div className="card">
@@ -400,64 +387,91 @@ function Alive({ data }: { data: PlayerViewData }) {
   );
 }
 
-function Accuse({ data }: { data: PlayerViewData }) {
+function BonusMove({ data }: { data: PlayerViewData }) {
+  const [mode, setMode] = useState<"choose" | "guess">("choose");
   const [pick, setPick] = useState<string | null>(null);
   const [confirming, setConfirming] = useState(false);
   const a = useAction();
-  const left = data.me.accusationsLeft;
   const paused = data.game.status === "paused";
+  const pickName = data.others.find((o) => o.id === pick)?.firstName;
+
+  if (data.me.bonusUsed) {
+    return (
+      <div className="card">
+        <p className="eyebrow">⚡ Bonus move</p>
+        <p className="muted small">You&apos;ve used your bonus move for this game.</p>
+        <Flash result={a.result} />
+      </div>
+    );
+  }
+
   return (
-    <details className="card">
-      <summary>Think you know who&apos;s hunting you? ({left} accusation{left === 1 ? "" : "s"} left)</summary>
-      <p className="muted small">
-        Right: they&apos;re out, it counts as a kill, and you&apos;re shielded for 10 minutes. Wrong: your hunter gets a
-        clue about you. {!data.me.bonusEarned && `You earn a bonus accusation at ${data.game.settings.bonusAt} kills.`}
-      </p>
-      {left > 0 && (
+    <div className="card">
+      <div>
+        <p className="eyebrow">⚡ Bonus move · 1 per game</p>
+        <p className="muted small">Pick one. Using either one uses it up.</p>
+      </div>
+      {mode === "choose" ? (
+        <div className="row wrap">
+          <Btn kind="ghost" pending={a.pending} disabled={paused} onClick={() => a.run(() => rerollAction(data.token))}>
+            🔄 Swap my task
+          </Btn>
+          <Btn kind="ghost" disabled={paused} onClick={() => setMode("guess")}>
+            🕵️ Guess my hunter
+          </Btn>
+        </div>
+      ) : (
         <>
-          <div className="list">
+          <p className="small">
+            Who has <em>you</em> as their target? <span style={{ color: "var(--ok)" }}>Right:</span> they&apos;re out and it
+            counts as your catch. <span style={{ color: "var(--danger)" }}>Wrong:</span> nothing happens, but your bonus move
+            is gone.
+          </p>
+          <div className="photo-grid">
             {data.others.map((p) => (
               <button
                 key={p.id}
                 type="button"
-                className={`pick ${pick === p.id ? "on" : ""}`}
+                className={`photo-pick ${pick === p.id ? "on" : ""}`}
                 onClick={() => {
                   setPick(p.id);
                   setConfirming(false);
                 }}
               >
-                <Avatar url={p.photoUrl} name={p.firstName} size={36} />
-                {p.firstName}
+                <Photo url={p.photoUrl} name={p.firstName} />
+                <span>{p.firstName}</span>
               </button>
             ))}
           </div>
-          {pick &&
-            (confirming ? (
-              <Btn
-                kind="danger"
-                pending={a.pending}
-                disabled={paused}
-                onClick={() =>
-                  a.run(
-                    () => accuseAction(data.token, pick),
-                    () => {
-                      setPick(null);
-                      setConfirming(false);
-                    },
-                  )
-                }
-              >
-                Confirm: accuse {data.others.find((o) => o.id === pick)?.firstName}
-              </Btn>
-            ) : (
-              <Btn kind="ghost" onClick={() => setConfirming(true)}>
-                Accuse {data.others.find((o) => o.id === pick)?.firstName}
-              </Btn>
-            ))}
+          <div className="row wrap">
+            {pick &&
+              (confirming ? (
+                <Btn
+                  kind="danger"
+                  pending={a.pending}
+                  disabled={paused}
+                  onClick={() => a.run(() => accuseAction(data.token, pick), () => setConfirming(false))}
+                >
+                  Confirm: it&apos;s {pickName}
+                </Btn>
+              ) : (
+                <Btn onClick={() => setConfirming(true)}>It&apos;s {pickName}</Btn>
+              ))}
+            <Btn
+              kind="ghost"
+              onClick={() => {
+                setMode("choose");
+                setPick(null);
+                setConfirming(false);
+              }}
+            >
+              Back
+            </Btn>
+          </div>
         </>
       )}
       <Flash result={a.result} />
-    </details>
+    </div>
   );
 }
 
@@ -518,8 +532,28 @@ function GhostActions({ data }: { data: PlayerViewData }) {
   const betA = useAction();
   const polt = useAction();
   const everyone = data.others;
+  const ranked = [...everyone].sort((x, y) => (y.kills ?? 0) - (x.kills ?? 0) || x.firstName.localeCompare(y.firstName));
   return (
     <>
+      <div className="card">
+        <h3>📊 Who&apos;s winning</h3>
+        <p className="muted small">Catches so far, for players still in. Only the ghosts can see this.</p>
+        <div className="list">
+          {ranked.map((p, i) => (
+            <div key={p.id} className="row" style={{ gap: 10 }}>
+              <span className="muted mono small" style={{ width: 18 }}>
+                {i + 1}
+              </span>
+              <Avatar url={p.photoUrl} name={p.firstName} size={32} />
+              <span style={{ flex: 1 }}>{p.firstName}</span>
+              <span className="tag gold">
+                {p.kills ?? 0} catch{p.kills === 1 ? "" : "es"}
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+
       <div className="card">
         <h3>Betting pool</h3>
         {data.me.betOnName ? (
@@ -534,7 +568,7 @@ function GhostActions({ data }: { data: PlayerViewData }) {
           <>
             <p className="muted small">Who gets the green card? One pick.</p>
             <div className="photo-grid">
-              {everyone.map((p) => (
+              {ranked.map((p) => (
                 <button
                   key={p.id}
                   type="button"
@@ -543,6 +577,9 @@ function GhostActions({ data }: { data: PlayerViewData }) {
                 >
                   <Photo url={p.photoUrl} name={p.firstName} />
                   <span>{p.firstName}</span>
+                  <span className="muted" style={{ fontSize: 12 }}>
+                    {p.kills ?? 0} catch{p.kills === 1 ? "" : "es"}
+                  </span>
                 </button>
               ))}
             </div>
