@@ -66,8 +66,6 @@ async function logEvent(gameId: string, type: string, actorId: string | null, su
 export async function signUp(_: Result | null, form: FormData): Promise<Result> {
   const firstName = clean(form.get("firstName"), 30);
   const how = clean(form.get("how"), 40);
-  const phone = clean(form.get("phone"), 20);
-  const sms = form.get("sms") === "on" && phone.length > 0;
   if (!firstName) return fail("Add your first name.");
   if (!how) return fail("Tell us how you know Afam.");
 
@@ -86,8 +84,8 @@ export async function signUp(_: Result | null, form: FormData): Promise<Result> 
 
   const token = newToken();
   await db()`
-    insert into players (game_id, token, first_name, photo_url, how_know_afam, phone, sms_opt_in)
-    values (${game.id}, ${token}, ${firstName}, ${photoUrl}, ${how}, ${sms ? phone : null}, ${sms})`;
+    insert into players (game_id, token, first_name, photo_url, how_know_afam)
+    values (${game.id}, ${token}, ${firstName}, ${photoUrl}, ${how})`;
   (await cookies()).set("sm_token", token, { maxAge: 60 * 60 * 24 * 60, httpOnly: true, sameSite: "lax", path: "/" });
   redirect(`/p/${token}`);
 }

@@ -41,14 +41,6 @@ export function JoinForm() {
         // eslint-disable-next-line @next/next/no-img-element
         <img src={preview} alt="Your photo" className="target-photo" style={{ maxWidth: 200 }} />
       )}
-      <label>
-        Phone (optional, for game texts)
-        <input name="phone" type="tel" autoComplete="tel" maxLength={20} />
-      </label>
-      <label className="row" style={{ display: "flex" }}>
-        <input name="sms" type="checkbox" style={{ width: 20, minHeight: 20 }} />
-        <span>Text me game updates</span>
-      </label>
       {state && !state.ok && <p className="flash error">{state.error}</p>}
       <button className="btn primary" disabled={pending}>
         {pending ? "Submitting…" : "Submit application"}

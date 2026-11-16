@@ -30,6 +30,9 @@ Locked-in changes on top of `../plan-overview.md`. This is the source of truth f
 - **No time limit to join.** Late arrivals tap "I'm here" and join the loop at the next catch (or within 5 minutes).
 - **Joining closes at the final 6.** Once 6 or fewer players are left, new arrivals become spectators (they can bet and send a tip). Decided Nov 15; replaces the original "~5 players or 90 minutes" cutoff.
 
+## Texts
+- **No text messages** (decided Nov 15). US carrier registration could take up to two weeks, too close to the party. The sign-up form no longer asks for a phone number. Afam announces the start in person and with the Partiful blast.
+
 ## Drinks
 - **Every catch earns a beer, a shot, or a mocktail on Afam's bar tab.** Correct accusations count as catches.
 - **Honor system:** players tell the bartender; nothing in the app tracks it. (A phone voucher with a "Redeem" button was considered and parked for later.)
