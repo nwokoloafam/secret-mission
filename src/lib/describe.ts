@@ -59,6 +59,10 @@ export function describeEvent(e: FeedEvent, name: (id: string | null) => string)
       return `${a} haunted ${s}.`;
     case "mission_added":
       return `New mission: ${e.data.text}`;
+    case "reset":
+      return `🔁 New round with the same players (${e.data.players} checked in).`;
+    case "bar_tab":
+      return e.data.open ? "🍺 Bar tab reopened." : "🍺 Bar tab closed.";
     case "winner_set":
       return `${s} declared winner.`;
     default:

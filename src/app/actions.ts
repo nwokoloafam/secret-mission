@@ -66,8 +66,6 @@ async function logEvent(gameId: string, type: string, actorId: string | null, su
 export async function signUp(_: Result | null, form: FormData): Promise<Result> {
   const firstName = clean(form.get("firstName"), 30);
   const how = clean(form.get("how"), 40);
-  const phone = clean(form.get("phone"), 20);
-  const sms = form.get("sms") === "on" && phone.length > 0;
   if (!firstName) return fail("Add your first name.");
   if (!how) return fail("Tell us how you know Afam.");
 
@@ -86,8 +84,8 @@ export async function signUp(_: Result | null, form: FormData): Promise<Result> 
 
   const token = newToken();
   await db()`
-    insert into players (game_id, token, first_name, photo_url, how_know_afam, phone, sms_opt_in)
-    values (${game.id}, ${token}, ${firstName}, ${photoUrl}, ${how}, ${sms ? phone : null}, ${sms})`;
+    insert into players (game_id, token, first_name, photo_url, how_know_afam)
+    values (${game.id}, ${token}, ${firstName}, ${photoUrl}, ${how})`;
   (await cookies()).set("sm_token", token, { maxAge: 60 * 60 * 24 * 60, httpOnly: true, sameSite: "lax", path: "/" });
   redirect(`/p/${token}`);
 }
@@ -127,7 +125,8 @@ export async function submitKillAction(token: string, code: string): Promise<Res
   return wrap(async () => {
     const r = await play(token, (s, c, id) => E.submitKill(s, c, id, code));
     const kill = r.events.find((e) => e.type === "kill");
-    return { ok: true, message: "Got them.", data: { victimId: kill?.subjectId ?? null } };
+    const drink = r.state.game.settings.barTabOpen ? " 🍺 Your drink's on Afam's tab." : "";
+    return { ok: true, message: `Got them.${drink}`, data: { victimId: kill?.subjectId ?? null } };
   });
 }
 
@@ -144,15 +143,18 @@ export async function accuseAction(token: string, suspectId: string): Promise<Re
     const r = await play(token, (s, c, id) => E.accuse(s, c, id, suspectId));
     const right = r.events.some((e) => e.type === "accuse_right");
     return right
-      ? { ok: true, message: "You caught your hunter! They're out, and you're shielded for 10 minutes." }
-      : { ok: true, message: "Wrong guess. Your hunter just got a clue about you…" };
+      ? {
+          ok: true,
+          message: `You caught your hunter! They're out, and it counts as your catch.${r.state.game.settings.barTabOpen ? " 🍺 Drink's on Afam's tab." : ""}`,
+        }
+      : { ok: true, message: "Wrong guess. Nothing happens, but your bonus action is used up." };
   });
 }
 
 export async function rerollAction(token: string): Promise<Result> {
   return wrap(async () => {
     await play(token, (s, c, id) => E.reroll(s, c, id));
-    return { ok: true, message: "New task assigned." };
+    return { ok: true, message: "New task assigned. That was your bonus action." };
   });
 }
 
@@ -317,6 +319,26 @@ export async function hostResolveDispute(admin: string, disputeId: string, uphel
     }
     await db()`update disputes set status = ${upheld ? "upheld" : "rejected"} where id = ${disputeId}`;
     await logEvent(g.id, "dispute_resolved", null, d.against as string, { upheld });
+  });
+}
+
+export async function hostSetBarTab(admin: string, open: boolean): Promise<Result> {
+  return wrap(async () => {
+    const g = await asHost(admin);
+    await db()`update games set settings = settings || ${db().json({ barTabOpen: open })} where id = ${g.id}`;
+    await logEvent(g.id, "bar_tab", null, null, { open });
+    return { ok: true, message: open ? "Bar tab reopened." : "Bar tab closed. Everyone's been told." };
+  });
+}
+
+export async function hostPlayAgain(admin: string): Promise<Result> {
+  return wrap(async () => {
+    const g = await asHost(admin);
+    await runAction(g.id, E.resetGame);
+    // Last round's clues and disputes don't carry over.
+    await db()`delete from hints where game_id = ${g.id}`;
+    await db()`update disputes set status = 'rejected' where game_id = ${g.id} and status = 'open'`;
+    return { ok: true, message: "New round ready. Everyone is checked back in. Tap Start game when ready." };
   });
 }
 

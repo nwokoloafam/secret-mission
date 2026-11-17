@@ -55,6 +55,7 @@ export default async function AdminPage({ params }: PageProps<"/admin/[token]">)
       targetEndAt: game.targetEndAt?.toISOString() ?? null,
       winnerId: game.winnerId,
       defaultDuration: game.settings.defaultDurationMinutes,
+      barTabOpen: game.settings.barTabOpen,
     },
     players: sorted.map((p) => ({
       id: p.id,

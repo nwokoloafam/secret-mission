@@ -1,5 +1,7 @@
 # Counter-Accusation Options
 
+> **Superseded (Nov 16):** guessing your hunter is now one choice of the single **bonus move** (see `decided-rules.md`). A wrong guess does nothing except use the bonus move; there are no automatic hints and no extra guess at 3 catches. Kept below as the record of what was considered.
+
 ## Decided
 - 1 accusation per game, plus 1 bonus at 3 kills (adjustable).
 - Correct: hunter eliminated, their hunter now hunts you.

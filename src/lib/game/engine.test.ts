@@ -9,6 +9,7 @@ import {
   placeBet,
   poltergeist,
   removePlayer,
+  resetGame,
   reroll,
   resumeGame,
   startGame,
@@ -208,7 +209,7 @@ describe("kills", () => {
 });
 
 describe("accusations", () => {
-  it("correct guess: hunter out, accuser gets a kill and a shield", () => {
+  it("correct guess: hunter out, accuser gets a kill, no shield", () => {
     const s = started(6);
     const hunter = hunterOf(s, "p0");
     const grand = hunterOf(s, hunter.id);
@@ -217,37 +218,34 @@ describe("accusations", () => {
     expect(P(st, hunter.id).status).toBe("eliminated");
     expect(P(st, hunter.id).outReason).toBe("accusation");
     expect(P(st, "p0").killCount).toBe(1);
-    expect(P(st, "p0").shieldUntil).toEqual(min(15));
+    expect(P(st, "p0").shieldUntil).toBeNull();
     expect(P(st, grand.id).targetId).toBe("p0");
     expectOneLoop(st);
 
-    // Shield blocks kill codes...
-    expectError(() => submitKill(st, ctx(6), grand.id, P(st, "p0").code!), "protected");
-    // ...but not after it runs out.
-    expect(P(submitKill(st, ctx(16), grand.id, P(st, "p0").code!).state, "p0").status).toBe("eliminated");
+    // No protection: the new hunter can catch them right away.
+    expect(P(submitKill(st, ctx(6), grand.id, P(st, "p0").code!).state, "p0").status).toBe("eliminated");
   });
 
-  it("wrong guess: uses the accusation and sends a hint to the real hunter", () => {
+  it("wrong guess: nothing happens except the bonus move is spent", () => {
     const s = started(6);
     const hunter = hunterOf(s, "p0");
     const wrong = s.players.find((p) => p.id !== "p0" && p.id !== hunter.id)!;
     const r = accuse(s, ctx(5), "p0", wrong.id);
-    expect(P(r.state, "p0").accusationsUsed).toBe(1);
-    expect(r.hints).toHaveLength(1);
-    expect(r.hints[0]).toMatchObject({ toPlayerId: hunter.id, aboutPlayerId: "p0", source: "outfit" });
-    expectError(() => accuse(r.state, ctx(6), "p0", hunter.id), "no_accusations");
+    expect(r.hints).toHaveLength(0);
+    expect(r.state.players.filter((p) => p.status === "alive")).toHaveLength(6);
+    expectError(() => accuse(r.state, ctx(6), "p0", hunter.id), "no_bonus");
+    expectError(() => reroll(r.state, ctx(6), "p0"), "no_bonus");
   });
 
-  it("earns a bonus accusation at 3 kills (accusations count)", () => {
+  it("no extra guess for making catches", () => {
     let s = started(10);
     s = kill(s, "p0").state;
     s = kill(s, "p0").state;
+    s = kill(s, "p0").state;
     const hunter = hunterOf(s, "p0");
-    s = accuse(s, ctx(5), "p0", hunter.id).state; // 3rd "kill"
-    expect(P(s, "p0").killCount).toBe(3);
-    expect(P(s, "p0").bonusAccusationEarned).toBe(true);
+    s = accuse(s, ctx(5), "p0", hunter.id).state;
     const wrong = s.players.find((p) => p.status === "alive" && p.id !== "p0" && p.id !== hunterOf(s, "p0").id)!;
-    expect(() => accuse(s, ctx(6), "p0", wrong.id)).not.toThrow();
+    expectError(() => accuse(s, ctx(6), "p0", wrong.id), "no_bonus");
   });
 
   it("with two left, a correct accusation wins", () => {
@@ -310,11 +308,19 @@ describe("late arrivals", () => {
     expectOneLoop(s);
   });
 
-  it("become spectators after the join cutoff", () => {
+  it("can still join hours in (no time limit)", () => {
     const s0 = setup(8);
     s0.players.push(player(99, { status: "registered" }));
     let s = startGame(s0, ctx()).state;
-    s = checkIn(s, ctx(91), "p99").state;
+    s = checkIn(s, ctx(240), "p99").state;
+    expect(P(s, "p99").status).toBe("queued");
+  });
+
+  it("become spectators once it's down to the final 6", () => {
+    const s0 = setup(6);
+    s0.players.push(player(99, { status: "registered" }));
+    let s = startGame(s0, ctx()).state;
+    s = checkIn(s, ctx(10), "p99").state;
     expect(P(s, "p99").status).toBe("checked_in");
   });
 });
@@ -369,12 +375,43 @@ describe("ending", () => {
   });
 });
 
+describe("play again", () => {
+  it("resets an ended game with the same players, keeping leavers out", () => {
+    let s = started(6);
+    s = kill(s, "p0").state;
+    const leaver = s.players.find((p) => p.status === "alive" && p.id !== "p0")!.id;
+    s = removePlayer(s, ctx(3), leaver, "left").state;
+    s = endGame(s, ctx(10)).state;
+    const r = resetGame(s, ctx(11));
+    const st = r.state;
+    expect(st.game.status).toBe("setup");
+    expect(st.game.winnerId).toBeNull();
+    expect(P(st, leaver).status).toBe("left");
+    const back = st.players.filter((p) => p.status === "checked_in");
+    expect(back).toHaveLength(5);
+    back.forEach((p) => {
+      expect(p.killCount).toBe(0);
+      expect(p.targetId).toBeNull();
+      expect(p.code).toBeNull();
+    });
+    // and a new round starts cleanly
+    const s2 = startGame(st, ctx(12)).state;
+    expectOneLoop(s2);
+    expect(s2.players.filter((p) => p.status === "alive")).toHaveLength(5);
+  });
+
+  it("only works once the game has ended", () => {
+    expectError(() => resetGame(started(4), ctx(1)), "not_ended");
+  });
+});
+
 describe("other actions", () => {
-  it("one reroll per player", () => {
+  it("one bonus move: swapping your task uses up your guess too", () => {
     const s = started(5);
     const r = reroll(s, ctx(1), "p0");
     expect(P(r.state, "p0").missionId).not.toBe(P(s, "p0").missionId);
-    expectError(() => reroll(r.state, ctx(2), "p0"), "no_rerolls");
+    expectError(() => reroll(r.state, ctx(2), "p0"), "no_bonus");
+    expectError(() => accuse(r.state, ctx(2), "p0", hunterOf(r.state, "p0").id), "no_bonus");
   });
 
   it("ghosts can bet once and send one poltergeist hint", () => {

@@ -20,6 +20,7 @@ export default async function PlayerPage({ params }: PageProps<"/p/[token]">) {
   const byId = new Map(players.map((p) => [p.id, p]));
   const target = me.target_id ? byId.get(me.target_id) : undefined;
   const alive = players.filter((p) => p.status === "alive");
+  const isGhost = me.status === "eliminated" || (me.status === "checked_in" && game.status !== "setup");
   const now = serverNow();
   const future = (d: Date | null) => (d && d.getTime() > now ? d.toISOString() : null);
 
@@ -31,9 +32,7 @@ export default async function PlayerPage({ params }: PageProps<"/p/[token]">) {
       photoUrl: me.photo_url,
       status: me.status,
       code: me.code,
-      rerollsLeft: me.rerolls_left,
-      accusationsLeft: Math.max(0, 1 + (me.bonus_accusation_earned ? 1 : 0) - me.accusations_used),
-      bonusEarned: me.bonus_accusation_earned,
+      bonusUsed: me.rerolls_left <= 0 || me.accusations_used > 0,
       killCount: me.kill_count,
       graceUntil: future(me.grace_until),
       shieldUntil: future(me.shield_until),
@@ -42,6 +41,7 @@ export default async function PlayerPage({ params }: PageProps<"/p/[token]">) {
       outReason: me.out_reason,
       outByName: me.out_by ? (byId.get(me.out_by)?.first_name ?? null) : null,
       betOnName: me.bet_on_id ? (byId.get(me.bet_on_id)?.first_name ?? null) : null,
+      betOnPhoto: me.bet_on_id ? (byId.get(me.bet_on_id)?.photo_url ?? null) : null,
       poltergeistUsed: me.poltergeist_used,
     },
     game: {
@@ -49,7 +49,11 @@ export default async function PlayerPage({ params }: PageProps<"/p/[token]">) {
       status: game.status,
       targetEndAt: game.targetEndAt?.toISOString() ?? null,
       winnerName: game.winnerId ? (byId.get(game.winnerId)?.first_name ?? null) : null,
-      settings: { bonusAt: game.settings.bonusAccusationAtKills },
+      settings: {
+        bonusAt: game.settings.bonusAccusationAtKills,
+        barTabOpen: game.settings.barTabOpen,
+        joinCutoff: game.settings.joinCutoffPlayers,
+      },
     },
     target: target
       ? { id: target.id, firstName: target.first_name, photoUrl: target.photo_url, how: target.how_know_afam }
@@ -65,7 +69,8 @@ export default async function PlayerPage({ params }: PageProps<"/p/[token]">) {
       .map((p) => p.first_name),
     others: alive
       .filter((p) => p.id !== me.id)
-      .map((p) => ({ id: p.id, firstName: p.first_name, photoUrl: p.photo_url })),
+      // Catch counts are secret during the game, except to people who are out (for betting).
+      .map((p) => ({ id: p.id, firstName: p.first_name, photoUrl: p.photo_url, kills: isGhost ? p.kill_count : undefined })),
     broadcast: (broadcast?.data?.text as string) ?? null,
   };
 

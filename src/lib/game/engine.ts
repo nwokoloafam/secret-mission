@@ -20,7 +20,6 @@ import {
   OutReason,
   Player,
 } from "./types";
-import { nextHintFor } from "./hints";
 
 // ─────────────────────────────────────────────
 // Draft: a working copy of the state plus everything the action produced
@@ -165,7 +164,6 @@ class Draft {
   creditKill(killer: Player) {
     killer.killCount += 1;
     killer.lastKillAt = this.now;
-    if (killer.killCount >= this.settings.bonusAccusationAtKills) killer.bonusAccusationEarned = true;
   }
 
   /** After a kill, splice the first queued player in: killer → newcomer → killer's new target. */
@@ -259,6 +257,7 @@ export function checkIn(state: GameState, ctx: Ctx, playerId: string): ActionRes
 function joinCutoffReached(d: Draft): boolean {
   const s = d.settings;
   if (d.alive().length <= s.joinCutoffPlayers) return true;
+  if (!s.joinCutoffMinutes) return false; // no time limit
   const started = d.game.startedAt;
   return !!started && d.now.getTime() - started.getTime() >= s.joinCutoffMinutes * 60_000;
 }
@@ -341,8 +340,7 @@ export function accuse(state: GameState, ctx: Ctx, accuserId: string, suspectId:
   d.requireActive();
   const accuser = d.player(accuserId);
   d.requireAlive(accuser);
-  const allowed = 1 + (accuser.bonusAccusationEarned ? 1 : 0);
-  if (accuser.accusationsUsed >= allowed) throw new GameError("no_accusations", "You have no accusations left.");
+  if (bonusMoveUsed(accuser)) throw new GameError("no_bonus", "You've already used your bonus action.");
   if (suspectId === accuserId) throw new GameError("self", "You can't accuse yourself.");
   const suspect = d.player(suspectId);
   if (suspect.status !== "alive") throw new GameError("suspect_out", "That player isn't in the game.");
@@ -354,7 +352,6 @@ export function accuse(state: GameState, ctx: Ctx, accuserId: string, suspectId:
     // Correct: hunter is out; their hunter now hunts the accuser.
     const nextHunter = d.takeOut(hunter, "accusation", accuser.id);
     d.creditKill(accuser);
-    accuser.shieldUntil = new Date(d.now.getTime() + d.settings.shieldMinutes * 60_000);
     d.event("accuse_right", accuser.id, hunter.id);
     d.notify(hunter.id, "eliminated");
     if (nextHunter && nextHunter.id !== accuser.id) d.newTarget(nextHunter);
@@ -362,16 +359,18 @@ export function accuse(state: GameState, ctx: Ctx, accuserId: string, suspectId:
     d.spliceQueuedAfterKill(accuser);
     d.endIfOver();
   } else {
-    // Wrong: the accuser's real hunter gets a clue about the accuser.
+    // Wrong: nothing happens, except the bonus action is spent.
     d.event("accuse_wrong", accuser.id, suspect.id);
-    const hint = nextHintFor(d.state, accuser.id);
-    if (hint) {
-      accuser.hintTierRevealed = hint.nextTier;
-      d.hints.push({ toPlayerId: hunter.id, aboutPlayerId: accuser.id, source: hint.source, text: hint.text });
-      d.notify(hunter.id, "hint");
-    }
   }
   return d.result();
+}
+
+/**
+ * Each player gets ONE bonus action per game: guess their hunter OR swap their
+ * hunter. Using either uses it up.
+ */
+export function bonusMoveUsed(p: Player): boolean {
+  return p.rerollsLeft <= 0 || p.accusationsUsed > 0;
 }
 
 /** Player swaps their mission (once per game). */
@@ -380,7 +379,7 @@ export function reroll(state: GameState, ctx: Ctx, playerId: string): ActionResu
   d.requireActive();
   const p = d.player(playerId);
   d.requireAlive(p);
-  if (p.rerollsLeft <= 0) throw new GameError("no_rerolls", "You've already used your reroll.");
+  if (bonusMoveUsed(p)) throw new GameError("no_bonus", "You've already used your bonus action.");
   p.rerollsLeft -= 1;
   d.assignMission(p);
   d.event("reroll", p.id, null, { missionId: p.missionId });
@@ -488,6 +487,48 @@ export function endGame(state: GameState, ctx: Ctx): ActionResult {
   const d = new Draft(state, ctx);
   if (d.game.status === "setup") throw new GameError("not_started", "The game hasn't started.");
   d.finish("host");
+  return d.result();
+}
+
+/**
+ * "Play again with the same players": put an ended game back to the start.
+ * Everyone who played (or was waiting) is checked back in with the same
+ * personal link; people who left the party stay out. Afam then hits Start.
+ */
+export function resetGame(state: GameState, ctx: Ctx): ActionResult {
+  const d = new Draft(state, ctx);
+  if (d.game.status !== "ended") throw new GameError("not_ended", "End the game before starting a new round.");
+  for (const p of d.state.players) {
+    if (["alive", "eliminated", "queued", "checked_in"].includes(p.status)) p.status = "checked_in";
+    p.code = null;
+    p.targetId = null;
+    p.missionId = null;
+    p.missionsSeen = [];
+    p.rerollsLeft = 1;
+    p.accusationsUsed = 0;
+    p.bonusAccusationEarned = false;
+    p.killCount = 0;
+    p.lastKillAt = null;
+    p.hintTierRevealed = 0;
+    p.graceUntil = null;
+    p.shieldUntil = null;
+    p.queuedAt = null;
+    if (p.status !== "left") {
+      p.outAt = null;
+      p.outReason = null;
+      p.outBy = null;
+    }
+    p.betOnId = null;
+    p.poltergeistUsed = false;
+  }
+  d.game.status = "setup";
+  d.game.startedAt = null;
+  d.game.targetEndAt = null;
+  d.game.pausedAt = null;
+  d.game.endedAt = null;
+  d.game.winnerId = null;
+  d.event("reset", null, null, { players: d.state.players.filter((p) => p.status === "checked_in").length });
+  d.notify(null, "game_started");
   return d.result();
 }
 

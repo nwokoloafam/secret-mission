@@ -23,9 +23,25 @@ Locked-in changes on top of `../plan-overview.md`. This is the source of truth f
 - Removing a player is **not** a kill: no one gets kill credit.
 - Removed players show up in the end reveal as "left early."
 
+## Kill stories
+- **Dropped.** No "tell the story" prompt after a catch (decided Nov 15). The reveal shows the kill chain without stories.
+
+## Late arrivals
+- **No time limit to join.** Late arrivals tap "I'm here" and join the loop at the next catch (or within 5 minutes).
+- **Joining closes at the final 6.** Once 6 or fewer players are left, new arrivals become spectators (they can bet and send a tip). Decided Nov 15; replaces the original "~5 players or 90 minutes" cutoff.
+
+## Texts
+- **No text messages** (decided Nov 15). US carrier registration could take up to two weeks, too close to the party. The sign-up form no longer asks for a phone number. Afam announces the start in person and with the Partiful blast.
+
+## Drinks
+- **Every catch earns a beer, a shot, or a mocktail on Afam's bar tab.** Correct accusations count as catches.
+- **Honor system:** players tell the bartender; nothing in the app tracks it. (A phone voucher with a "Redeem" button was considered and parked for later.)
+- **Afam can close the tab** from the admin page ("Close the tab"). Every player then sees a banner that the tab is finished; catches still count. He can reopen it.
+- No task ever requires drinking.
+
 ## Missions
-- **One reroll per player.** Self-serve, no need to ask Afam.
-- **Afam's skip is the backstop:** if a player has used their reroll and is still stuck (target left, mission doesn't fit), Afam can skip the mission from admin.
+- **Task swaps are a bonus action** (see below). Self-serve, no need to ask Afam.
+- **Afam's skip is the backstop:** if a player has used their bonus action and is still stuck (target left, mission doesn't fit), Afam can skip the mission from admin.
 
 ## Pause
 - Afam can pause and resume from admin.
@@ -39,22 +55,21 @@ Locked-in changes on top of `../plan-overview.md`. This is the source of truth f
 ## Code leaking
 - Ignored. Someone could tell a friend their code early, but it's unlikely at a friendly party.
 
-## Counter-accusation
-- Each player gets **1 accusation per game**, plus **1 bonus accusation at 3 kills** (number adjustable).
-- You accuse by picking who you think is hunting you.
-- **Correct:** your hunter is eliminated; their hunter now hunts you.
-  - **Boost:** counts as a kill **and** you get a **10-minute shield**.
-  - The shield blocks **kill codes only**, not accusations.
-  - Correct accusations **count toward the 3-kill bonus** accusation.
-- **Wrong:** **hint to your hunter** (a clue about you). See `accusation-options.md` for how hints are picked.
+## Bonus actions (decided Nov 16)
+- There are **2 bonus actions**. Each player can use **only 1 per game**:
+  1. **Guess who's hunting you.** Right: your hunter is out and it counts as your catch; their hunter now hunts you. Wrong: nothing happens. No shield.
+  2. **Swap your task** for a new one.
+- *(Draft, not built)* A third, **Team up**, is in `team-up-draft.md`.
+- Replaces: 1 accusation + 1 bonus accusation at 3 catches, a separate task swap, and hints to the hunter on a wrong guess.
 
 ## Custom hints
 - Afam can write a **custom hint for each player** from admin, before or during the game.
-- If a player has one, it's used in the hint escalation (see `accusation-options.md`).
-- Afam can also send any player's custom hint to their hunter manually, at any time.
+- Afam can send any player's custom hint to their hunter, at any time (e.g. "they changed shirts").
+- Automatic hints were dropped (Nov 16): the hunter already has your name and photo, so clues added little.
 
 ## Ghosts (eliminated players)
 - **Betting pool:** ghosts pick who they think will win; correct picks get a shout-out at the reveal.
+- **Stats board ("Who's winning"):** ghosts see each remaining player's catch count, to bet with. Live players still can't see counts.
 - **Poltergeist:** each ghost can send one anonymous hint to any living player, true or a red herring.
 
 ## Not doing
