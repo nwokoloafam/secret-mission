@@ -1,6 +1,7 @@
 name: App checks
 
 on:
+  workflow_dispatch:
   pull_request:
   push:
     branches: [main, codex/cloudflare-migration]
@@ -10,7 +11,7 @@ permissions:
 
 concurrency:
   group: checks-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   check:
@@ -27,3 +28,48 @@ jobs:
       - run: npm run typecheck
       - run: npm run build:cloudflare
       - run: npm run build
+
+  deploy:
+    name: Deploy to Cloudflare
+    needs: check
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      CLOUDFLARE_ENABLE_CUSTOM_DOMAIN: ${{ vars.CLOUDFLARE_ENABLE_CUSTOM_DOMAIN || 'false' }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npm run build:cloudflare
+      - name: Deploy the verified main branch
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          if [ -z "$CLOUDFLARE_API_TOKEN" ]; then
+            echo "::error::Add the repository secret CLOUDFLARE_API_TOKEN before enabling Cloudflare deployment. See docs/cloudflare.md."
+            exit 1
+          fi
+          npx cf deploy --prebuilt --no-provision
+      - name: Verify database-backed signup page
+        run: |
+          curl --fail --silent --show-error --retry 3 --retry-delay 3 --max-time 30 \
+            https://secret-mission.chinniradhika98.workers.dev/join --output /tmp/signup.html
+          if grep -q '__next_error__' /tmp/signup.html; then
+            echo "::error::The deployed signup page returned a server error."
+            exit 1
+          fi
+          grep -q 'Visa application' /tmp/signup.html
+      - name: Verify the main domain after cutover
+        if: env.CLOUDFLARE_ENABLE_CUSTOM_DOMAIN == 'true'
+        run: |
+          curl --fail --silent --show-error --retry 3 --retry-delay 3 --max-time 30 \
+            https://game.afamnwokolo.com/join --output /tmp/main-domain-signup.html
+          if grep -q '__next_error__' /tmp/main-domain-signup.html; then
+            echo "::error::The main domain returned a server error."
+            exit 1
+          fi
+          grep -q 'Visa application' /tmp/main-domain-signup.html

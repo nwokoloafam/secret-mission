@@ -50,11 +50,31 @@ Authenticate with `npx cf auth login --scopes account:read user:read workers:wri
 
 To share management access: Cloudflare **Manage account → Members → Invite members**. A **Super Administrator – All Privileges** member has full control of the whole account, including billing and other members. Each person uses their own login. Choose a narrower Workers role when full account control is not intended.
 
-## GitHub checks and ongoing deployment
+## GitHub checks and deployment
 
-`.github/workflows/checks.yml` runs tests, TypeScript, the Cloudflare build, and the original Next build on pull requests and relevant pushes. It requires no production secrets and does not deploy automatically.
+`.github/workflows/checks.yml` runs tests, TypeScript, the Cloudflare build, and the original Next build on pull requests and relevant pushes. On `main`, the **Deploy to Cloudflare** job runs only after those checks pass. A manual run on `main` also deploys. PRs and the migration branch never deploy production or receive the deployment token.
 
-For automatic Cloudflare deployments, connect this GitHub repository in the Worker's Builds settings after the first verified deployment. Use `npm run build:cloudflare` as the build command and `npx cf deploy --prebuilt` as the deploy command, with Node 24.22+ selected. The GitHub app may require the repository owner's approval for access to this private repository. Do not connect `main` until this migration branch is merged and ready; do not expose runtime secrets as `NEXT_PUBLIC_` or `VITE_` values.
+Before merging, add a dedicated Cloudflare API token as the GitHub repository Actions secret **`CLOUDFLARE_API_TOKEN`**. Use Workers Scripts Edit for this Cloudflare account; domain cutover additionally needs Zone Read and Workers Routes Edit scoped to `afamnwokolo.com`. Existing Hyperdrive bindings do not require a separate Hyperdrive provisioning permission. Do not grant certificate-management permission to CI. Runtime database/photo secrets remain in Cloudflare; do not copy them to GitHub or expose them as `NEXT_PUBLIC_`/`VITE_` variables. The deployment preserves the already configured remote secrets. Do not use a personal CLI OAuth token as the CI secret.
+
+The job deploys the built Worker with automatic resource provisioning disabled and checks that its database-backed signup page responds correctly. When domain cutover is enabled, it checks the main-domain signup page too. This is a deployment smoke check, not a full game rehearsal. Keep Cloudflare's separate native Builds integration disconnected to avoid duplicate deployments.
+
+## Retire Vercel automatic deployment
+
+`vercel.json` sets `git.deploymentEnabled` to `false`. This disables automatic Git deployments for this migration and, once merged, main. It does not delete the existing Vercel deployment or move DNS. The current Vercel site remains available as the rollback target.
+
+Vercel may still report the private-repository author-permission failure before it reads this branch's configuration; existing failed statuses are not rewritten. If checks keep appearing, the Vercel project owner should use **Project → Settings → Git → Connected Git Repository → Disconnect** for this project. Do not delete the project or remove the Vercel GitHub app from unrelated repositories. Remove a required Vercel status check from branch rules only if one is configured, replacing it with the actual application check. Repository rules are unavailable on the current private-repository plan; none were changed by this migration.
+
+## Main domain cutover
+
+The configured target is **`game.afamnwokolo.com`**. It is opt-in: set the GitHub repository Actions variable **`CLOUDFLARE_ENABLE_CUSTOM_DOMAIN=true`** only when DNS is ready. The workflow passes it to both build and deploy. Local/manual equivalent: `CLOUDFLARE_ENABLE_CUSTOM_DOMAIN=true npm run deploy:cloudflare`. Leave it unset for the workers.dev testing address before cutover. After cutover, keep it true for every deployment of this Worker, including manual deployments, so the domain remains in the desired configuration.
+
+DNS inspection found `afamnwokolo.com` on WordPress nameservers and the `game` CNAME pointing to `197b1a13acb40c56.vercel-dns-017.com`. Workers Custom Domains require an active Cloudflare zone in the Worker's account; merely changing the WordPress CNAME to workers.dev is not sufficient.
+
+The domain owner needs to export/inventory the complete WordPress DNS zone, add it to Cloudflare, preserve existing website/email/verification records, and change the nameservers at the registrar to the assigned Cloudflare nameservers. This is a DNS-provider change; the domain registration can stay where it is. Verify DNSSEC handling before changing nameservers. Preserve the Vercel `game` record during that initial move so the live game stays available.
+
+After gameplay verification and once the zone is active, remove the old `game` CNAME, enable the variable above, and run the main deployment to attach the Custom Domain and issue its certificate. Verify HTTPS and the signup/player/admin workflow on the main hostname. Keep Vercel available for rollback; restoring the recorded Vercel CNAME is the DNS rollback path, after detaching the Worker hostname. DNS and account changes occur outside Git; this PR alone does not perform them.
+
+References: [Vercel Git deployment controls](https://vercel.com/docs/project-configuration/git-configuration), [disconnecting Vercel Git](https://vercel.com/docs/project-configuration/git-settings#disconnect-your-git-repository), [Cloudflare Custom Domains](https://developers.cloudflare.com/workers/configuration/routing/custom-domains/).
 
 ## Verification before domain cutover
 

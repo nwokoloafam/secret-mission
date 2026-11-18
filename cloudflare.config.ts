@@ -6,6 +6,11 @@ export default defineConfig({
     name: "secret-mission",
     entrypoint: "vinext/server/fetch-handler",
     compatibilityDate: "2026-11-12",
+    // Enable only after the DNS zone is active in this account and the old
+    // game CNAME is removed. Preview/testing deployments keep workers.dev.
+    domains: process.env.CLOUDFLARE_ENABLE_CUSTOM_DOMAIN === "true"
+      ? ["game.afamnwokolo.com"]
+      : [],
     assets: {
       htmlHandling: "none",
       notFoundHandling: "none",
