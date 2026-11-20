@@ -58,11 +58,15 @@ Before merging, add a dedicated Cloudflare API token as the GitHub repository Ac
 
 The job deploys the built Worker with automatic resource provisioning disabled and checks that its database-backed signup page responds correctly. When domain cutover is enabled, it checks the main-domain signup page too. This is a deployment smoke check, not a full game rehearsal. Keep Cloudflare's separate native Builds integration disconnected to avoid duplicate deployments.
 
-## Retire Vercel automatic deployment
+## Parallel hosting and future Vercel retirement
 
-`vercel.json` sets `git.deploymentEnabled` to `false`. This disables automatic Git deployments for this migration and, once merged, main. It does not delete the existing Vercel deployment or move DNS. The current Vercel site remains available as the rollback target.
+Keep Vercel Git deployments enabled throughout Cloudflare testing. This PR does not disable or disconnect Vercel. Afam can continue deploying the existing site at `game.afamnwokolo.com` while the Worker is tested at `https://secret-mission.chinniradhika98.workers.dev`. Cloudflare deployment does not require turning off Vercel.
 
-Vercel may still report the private-repository author-permission failure before it reads this branch's configuration; existing failed statuses are not rewritten. If checks keep appearing, the Vercel project owner should use **Project → Settings → Git → Connected Git Repository → Disconnect** for this project. Do not delete the project or remove the Vercel GitHub app from unrelated repositories. Remove a required Vercel status check from branch rules only if one is configured, replacing it with the actual application check. Repository rules are unavailable on the current private-repository plan; none were changed by this migration.
+Both hosted sites use the same Supabase project, so player records and game actions are shared. Browser cookies are specific to each hostname. To open an existing player on Cloudflare, keep the complete `/p/<token>` path from their personal Vercel link and replace only the hostname with `secret-mission.chinniradhika98.workers.dev`; do not sign up again. Keep personal links private. The two deployments may temporarily run different code versions.
+
+**Future step, after the domain cutover and verification below:** disable Vercel automatic Git deployments with `git.deploymentEnabled: false` in `vercel.json`, or have the Vercel project owner disconnect this project's Git integration in **Project → Settings → Git → Connected Git Repository → Disconnect**. Preserve the project and last working deployment for rollback. Do not remove the Vercel GitHub app from unrelated repositories.
+
+Vercel's private-repository author-permission checks may still fail during parallel development. Those are separate from Cloudflare's application checks and deployment; resolve Vercel access with the project owner while keeping its integration enabled. Existing failed statuses are not rewritten. Review any required Vercel status checks when retiring the integration; no repository rules were changed by this migration.
 
 ## Main domain cutover
 
