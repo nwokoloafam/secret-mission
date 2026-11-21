@@ -35,6 +35,8 @@ Integration tests reset those databases' public schemas. Guards refuse other dat
 
 Nothing in this feature automatically migrates production or enables sending.
 
+The repository became public on November 21, 2026. Vercel's private-repository contributor restriction should no longer block previews; verify a fresh deployment rather than relying on an older blocked check. Preview deployment and successful build do not activate notifications: keep the feature off until the intended database has the migration. Use an isolated database for notification rehearsals because production hosts share Supabase.
+
 1. Apply `supabase/migrations/0003_notifications.sql` once to the intended database. Do not rerun the initial schema or the unrelated timeout migration. This adds columns/tables without changing existing game data.
 2. Deploy the feature code to every host writing to the shared database. Set `NOTIFICATIONS_ENABLED=true` on those hosts only after the migration. Keep their notification/email modes aligned: an old or disabled deployment will not create inbox entries for its actions.
 3. For in-page updates alone, leave `EMAIL_MODE=off`. For an isolated rehearsal, use `dry-run`. Preview rows are permanently tagged `dry-run`, and live dispatch never sends them.
