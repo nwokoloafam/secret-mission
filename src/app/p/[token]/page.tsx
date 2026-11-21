@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import { gameById, hintsTo, latestBroadcast, missionText, playerByToken, playersOf, serverNow } from "@/lib/db/queries";
+import { inboxForPlayer, notificationsEnabled, emailAvailable, emailPreview } from "@/lib/notifications";
 import { PlayerView, type PlayerViewData } from "./PlayerView";
 
 export default async function PlayerPage({ params }: PageProps<"/p/[token]">) {
@@ -11,11 +12,13 @@ export default async function PlayerPage({ params }: PageProps<"/p/[token]">) {
   const game = await gameById(me.game_id);
   if (!game) notFound();
 
-  const [players, hints, broadcast, mission] = await Promise.all([
+  const enabled = notificationsEnabled();
+  const [players, hints, broadcast, mission, notifications] = await Promise.all([
     playersOf(game.id),
     hintsTo(me.id),
     latestBroadcast(game.id),
     missionText(me.mission_id),
+    enabled ? inboxForPlayer(me.id) : Promise.resolve([]),
   ]);
   const byId = new Map(players.map((p) => [p.id, p]));
   const target = me.target_id ? byId.get(me.target_id) : undefined;
@@ -26,8 +29,14 @@ export default async function PlayerPage({ params }: PageProps<"/p/[token]">) {
 
   const data: PlayerViewData = {
     token,
+    notifications,
+    notificationsEnabled: enabled,
+    emailAvailable: emailAvailable(),
+    emailPreview: emailPreview(),
     me: {
       id: me.id,
+      emailOptIn: me.email_opt_in,
+      email: me.email,
       firstName: me.first_name,
       photoUrl: me.photo_url,
       status: me.status,
