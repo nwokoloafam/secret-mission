@@ -3,9 +3,6 @@ import { connection } from "next/server";
 import { gameById, hintsTo, latestBroadcast, missionText, playerByToken, playersOf, serverNow } from "@/lib/db/queries";
 import { inboxForPlayer, notificationsEnabled, emailAvailable, emailPreview } from "@/lib/notifications";
 import { PlayerView, type PlayerViewData } from "./PlayerView";
-import { scheduleEmailDispatch } from "@/lib/email/background";
-
-export const maxDuration = 300;
 
 export default async function PlayerPage({ params }: PageProps<"/p/[token]">) {
   await connection();
@@ -86,6 +83,5 @@ export default async function PlayerPage({ params }: PageProps<"/p/[token]">) {
     broadcast: (broadcast?.data?.text as string) ?? null,
   };
 
-  scheduleEmailDispatch({ recovery: true });
   return <PlayerView data={data} />;
 }

@@ -5,9 +5,6 @@ import { currentGame } from "@/lib/db/queries";
 import { emailAvailable, emailPreview } from "@/lib/notifications";
 import { JoinForm } from "./JoinForm";
 
-// The signup action's email work continues after the redirect response.
-export const maxDuration = 300;
-
 export default async function JoinPage() {
   await connection();
   const game = await currentGame();

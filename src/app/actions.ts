@@ -13,7 +13,6 @@ import { runAction, runTick } from "@/lib/db/games";
 import { currentGame, gameByAdminToken, newToken, playerByToken } from "@/lib/db/queries";
 import { uploadPhoto } from "@/lib/photos";
 import { emailAvailable, insertNotifications, notificationsEnabled, validEmail } from "@/lib/notifications";
-import { scheduleEmailDispatch } from "@/lib/email/background";
 
 export type Result = { ok: true; message?: string; data?: Record<string, unknown> } | { ok: false; error: string };
 
@@ -22,7 +21,6 @@ const fail = (error: string): Result => ({ ok: false, error });
 async function wrap(fn: () => Promise<Result | void>): Promise<Result> {
   try {
     const r = (await fn()) ?? { ok: true as const };
-    if (r.ok) scheduleEmailDispatch();
     refresh();
     return r;
   } catch (e) {
@@ -102,7 +100,6 @@ export async function signUp(_: Result | null, form: FormData): Promise<Result> 
     }
   });
   (await cookies()).set("sm_token", token, { maxAge: 60 * 60 * 24 * 60, httpOnly: true, sameSite: "lax", path: "/" });
-  scheduleEmailDispatch();
   redirect(`/p/${token}`);
 }
 
@@ -219,7 +216,7 @@ export async function poltergeistAction(token: string, toId: string, text: strin
 export async function tickAction(gameId: string): Promise<void> {
   try {
     const r = await runTick(gameId);
-    if (r) { scheduleEmailDispatch(); refresh(); }
+    if (r) refresh();
   } catch (e) {
     console.error(e);
   }
@@ -377,7 +374,7 @@ export async function hostTick(admin: string): Promise<void> {
     const g = await gameByAdminToken(admin);
     if (!g) return;
     const r = await runTick(g.id);
-    if (r) { scheduleEmailDispatch(); refresh(); }
+    if (r) refresh();
   } catch (e) {
     console.error(e);
   }

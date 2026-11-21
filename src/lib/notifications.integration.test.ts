@@ -10,7 +10,6 @@ vi.mock("next/cache", () => ({ refresh: vi.fn() }));
 vi.mock("next/headers", () => ({ cookies: vi.fn() }));
 vi.mock("next/navigation", () => ({ redirect: vi.fn() }));
 vi.mock("@/lib/photos", () => ({ uploadPhoto: vi.fn() }));
-vi.mock("@/lib/email/background", () => ({ scheduleEmailDispatch: vi.fn() }));
 
 import { runAction } from "./db/games";
 import { startGame, removePlayer, endGame, resetGame } from "./game/engine";

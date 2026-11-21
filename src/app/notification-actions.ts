@@ -5,7 +5,6 @@ import { db } from "@/lib/db/client";
 import { playerByToken } from "@/lib/db/queries";
 import { emailAvailable, insertNotifications, notificationsEnabled, validEmail } from "@/lib/notifications";
 import type { Result } from "./actions";
-import { scheduleEmailDispatch } from "@/lib/email/background";
 
 export async function markNotificationsRead(token: string, through: string): Promise<Result> {
   try {
@@ -38,7 +37,6 @@ export async function updateEmailPreferences(token: string, email: string, optIn
     }
     if (changed) await insertNotifications(tx, p.game_id, [{ playerId: p.id, kind: "personal_link", message: "Your personal game link is ready. Save this page to return." }]);
   });
-  scheduleEmailDispatch();
   refresh();
   return { ok: true, message: "Email preferences saved." };
   } catch { return { ok: false, error: "Could not save email preferences. Please try again." }; }
