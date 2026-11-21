@@ -4,7 +4,7 @@ import { EmailConfigError } from "@/lib/email/config";
 import { dispatchEmail, emailStatus } from "@/lib/email/dispatch";
 
 export const dynamic = "force-dynamic";
-export const maxDuration = 60;
+export const maxDuration = 300;
 
 function authorize(request: Request): Response | null {
   if (!dispatchAuthorized(request)) return Response.json({ error: "unauthorized" }, { status: 401 });

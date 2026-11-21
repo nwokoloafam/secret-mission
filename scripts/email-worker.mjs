@@ -28,7 +28,7 @@ while (!controller.signal.aborted) {
   try {
     const response = await fetch(endpoint, {
       method: "POST", redirect: "error", headers: { Authorization: `Bearer ${secret}` },
-      signal: AbortSignal.any([controller.signal, AbortSignal.timeout(25000)]),
+      signal: AbortSignal.any([controller.signal, AbortSignal.timeout(285000)]),
     });
     if (!response.ok) console.error(`Dispatcher returned HTTP ${response.status}.`);
   } catch {
