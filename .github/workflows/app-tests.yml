@@ -1,0 +1,52 @@
+name: Application tests
+
+on:
+  workflow_dispatch:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: app-tests-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_PASSWORD: ci-only
+        ports: [5432:5432]
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      TEST_DATABASE_URL: postgres://postgres:ci-only@127.0.0.1:5432/secret_mission_notifications_test
+      CORE_TEST_DATABASE_URL: postgres://postgres:ci-only@127.0.0.1:5432/secret_mission_notifications_coretest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24.22.0
+          cache: npm
+      - run: npm ci
+      - name: Create isolated notification test databases
+        run: |
+          node --input-type=module <<'JS'
+          import postgres from 'postgres';
+          const sql = postgres('postgres://postgres:ci-only@127.0.0.1:5432/postgres');
+          for (const name of ['secret_mission_notifications_test', 'secret_mission_notifications_coretest']) {
+            await sql.unsafe('create database ' + name);
+          }
+          await sql.end();
+          JS
+      - run: npm test
+      - run: npx next typegen
+      - run: npm run typecheck
+      - run: npm run build

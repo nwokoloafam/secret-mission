@@ -7,7 +7,7 @@ Design notes and decided rules live in [`background-info/`](background-info/READ
 
 | Piece | What it does |
 |---|---|
-| `src/lib/game/` | **The game engine.** Every rule (kills, accusations, hints, late joins, pause...) as plain functions with no database. Fully tested. |
+| `src/lib/game/` | **The game engine.** Every rule (kills, accusations, hints, late joins, pause...) as plain functions with no database. Covered by engine tests. |
 | `src/lib/db/` | Loads a game from the database, runs one engine action, saves the result in one transaction. |
 | `src/app/` | The website (Next.js): `/` home, `/join` sign-up, `/p/<token>` player page, `/admin/<token>` Afam's controls, `/reveal/<gameId>` end reveal. |
 | `src/app/actions.ts` | Every button's server-side code. |
@@ -29,7 +29,7 @@ Hosting: Vercel (auto-deploys `main`). Database and photos: Supabase.
    returning admin_token;
    ```
    Afam's admin page is then `https://game.afamnwokolo.com/admin/<admin_token>`. Keep it private.
-   For a test run, create a second game the same way; sign-ups always go to the newest game that hasn't ended.
+   For a test run, use an isolated database. A second game in the live database is not isolated: sign-ups always go to the newest unfinished game. See [notification rehearsal](docs/notifications.md).
 4. **Vercel environment variables:** Vercel → project → Settings → Environment Variables. Add the three names from `.env.example` with values from Supabase. Redeploy after adding them.
 
 ## Updating missions
@@ -38,7 +38,7 @@ Hosting: Vercel (auto-deploys `main`). Database and photos: Supabase.
 2. Run `npm run seed:missions` (regenerates `supabase/seed/missions.sql`).
 3. Paste that file into the Supabase SQL Editor and run it. Existing missions are updated, new ones added, nothing is deleted.
 
-Later, missions will also be editable from the admin page during the game.
+Missions are also editable from the admin page during the game.
 
 ## Running locally (optional)
 
@@ -48,3 +48,11 @@ cp .env.example .env.local   # fill in the values
 npm run dev                  # http://localhost:3000
 npm test                     # game engine tests
 ```
+
+## Personal updates
+
+See [notification setup and local rehearsal](docs/notifications.md) for the private in-page inbox, database migration, and multi-player tests. Optional email is a separate follow-up. The feature is off until its migration and deployment settings are configured.
+
+## Optional email follow-up
+
+See [optional email setup](docs/email.md) for the separate Brevo extension and `0004_email_notifications.sql`. In-page notifications work without this extension or a provider account.

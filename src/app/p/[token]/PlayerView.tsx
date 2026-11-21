@@ -17,6 +17,8 @@ import {
   updatePhoto,
 } from "@/app/actions";
 import { ACCESSORIES, COPY, TOP_COLORS } from "@/lib/copy";
+import type { InboxNotification } from "@/lib/notifications";
+import { Notifications } from "@/components/Notifications";
 import { HowToPlaySteps } from "@/components/HowToPlay";
 import { AutoRefresh, Avatar, Btn, Countdown, Flash, PhotoPicker, SaveLink, useAction } from "@/components/ui";
 
@@ -26,6 +28,8 @@ export interface PlayerViewData {
   token: string;
   me: {
     id: string;
+    emailOptIn: boolean;
+    email: string | null;
     firstName: string;
     photoUrl: string | null;
     status: string;
@@ -56,10 +60,15 @@ export interface PlayerViewData {
   outNames: string[];
   others: Person[];
   broadcast: string | null;
+  notifications: InboxNotification[];
+  notificationsEnabled: boolean;
+  emailAvailable: boolean;
+  emailPreview: boolean;
 }
 
 export function PlayerView({ data }: { data: PlayerViewData }) {
   const { me, game } = data;
+  const unreadUpdates = data.notifications.filter((n) => !n.readAt).length;
   const tick = useCallback(() => tickAction(game.id), [game.id]);
   const paused = game.status === "paused";
   const running = game.status === "active" || paused;
@@ -82,6 +91,9 @@ export function PlayerView({ data }: { data: PlayerViewData }) {
         </div>
       </header>
 
+      {data.notificationsEnabled && unreadUpdates > 0 && (
+        <a className="banner" href="#inbox-heading">{unreadUpdates} new update{unreadUpdates === 1 ? "" : "s"} — view your updates</a>
+      )}
       {paused && <p className="banner warn">{COPY.paused}</p>}
       {data.broadcast && <p className="banner">📣 {data.broadcast}</p>}
       {running && !game.settings.barTabOpen && (
@@ -149,13 +161,13 @@ export function PlayerView({ data }: { data: PlayerViewData }) {
         </details>
       )}
 
+      <div className="card">
+        <h3>Save your personal link</h3>
+        <p className="muted small">Copy or save this link so you can return to your game page and see your latest updates.</p>
+        <SaveLink token={data.token} />
+      </div>
+      {data.notificationsEnabled && <Notifications token={data.token} notifications={data.notifications} emailAvailable={data.emailAvailable} emailPreview={data.emailPreview} emailOptIn={me.emailOptIn} email={me.email} />}
       <PhotoUpdate data={data} />
-      {me.status !== "registered" && (
-        <details className="card">
-          <summary>Save my link</summary>
-          <SaveLink token={data.token} />
-        </details>
-      )}
     </main>
   );
 }
@@ -173,7 +185,6 @@ function NotHereYet({ data }: { data: PlayerViewData }) {
         <p className="muted">
           This page is your personal link to the game. Save it so you can get back in on party night.
         </p>
-        <SaveLink token={data.token} />
       </div>
       <div className="card">
         <h3>At the party? Check in</h3>

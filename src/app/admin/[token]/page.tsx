@@ -1,3 +1,4 @@
+import { EmailOutbox } from "@/components/EmailOutbox";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import { describeEvent } from "@/lib/describe";
@@ -88,5 +89,5 @@ export default async function AdminPage({ params }: PageProps<"/admin/[token]">)
     },
   };
 
-  return <AdminView data={data} />;
+  return <><AdminView data={data} /><div className="page"><EmailOutbox gameId={game.id} /></div></>;
 }

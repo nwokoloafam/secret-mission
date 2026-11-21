@@ -16,6 +16,8 @@ import {
   Player,
 } from "../game/types";
 import { db } from "./client";
+import { planNotifications } from "../notification-plan";
+import { insertNotifications, notificationsEnabled } from "../notifications";
 
 type Row = Record<string, unknown>;
 type Tx = postgres.TransactionSql;
@@ -127,6 +129,13 @@ async function saveResult(tx: Tx, before: GameState, result: ActionResult) {
         poltergeist_used = ${p.poltergeistUsed}
       where id = ${p.id}`;
   }
+
+  if (notificationsEnabled() && before.game.status === "ended" && g.status === "setup") {
+    await tx`update email_outbox set status = 'suppressed', error_code = 'round_restarted'
+      where status = 'pending' and notification_id in
+        (select id from player_notifications where game_id = ${g.id})`;
+  }
+  await insertNotifications(tx, g.id, planNotifications(before, result));
 
   for (const e of result.events) {
     await tx`
