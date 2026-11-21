@@ -19,7 +19,7 @@ Supabase is retained for data and photos. Pointing both deployments at the same 
 ## Commands
 
 ```sh
-npm test                    # engine + Workers connection-lifecycle checks
+npm test                    # engine, Workers connection lifecycle, scheduler checks
 npm run typecheck
 npm run check:cloudflare     # framework compatibility report
 npm run dev:cloudflare       # Workers runtime locally, port 3001
@@ -52,7 +52,7 @@ To share management access: Cloudflare **Manage account → Members → Invite m
 
 ## GitHub checks and deployment
 
-`.github/workflows/checks.yml` runs tests, TypeScript, the Cloudflare build, and the original Next build on pull requests and relevant pushes. On `main`, the **Deploy to Cloudflare** job runs only after those checks pass. A manual run on `main` also deploys. PRs and the migration branch never deploy production or receive the deployment token.
+`.github/workflows/checks.yml` runs tests, TypeScript, the Cloudflare application and scheduler builds, and the original Next build on pull requests and relevant pushes. On `main`, the **Deploy to Cloudflare** job runs only after those checks pass. A manual run on `main` also deploys. PRs and the migration branch never deploy production or receive the deployment token.
 
 Before merging, add a dedicated Cloudflare API token as the GitHub repository Actions secret **`CLOUDFLARE_API_TOKEN`**. Use Workers Scripts Edit for this Cloudflare account; domain cutover additionally needs Zone Read and Workers Routes Edit scoped to `afamnwokolo.com`. Existing Hyperdrive bindings do not require a separate Hyperdrive provisioning permission. Do not grant certificate-management permission to CI. Runtime database/photo secrets remain in Cloudflare; do not copy them to GitHub or expose them as `NEXT_PUBLIC_`/`VITE_` variables. The deployment preserves the already configured remote secrets. Do not use a personal CLI OAuth token as the CI secret.
 
@@ -90,3 +90,30 @@ References: [Vercel Git deployment controls](https://vercel.com/docs/project-con
 - Change only the chosen game hostname after verification; keep Vercel available for rollback.
 
 Both local workerd and the hosted Worker rejected the direct socket connection to Supabase's pooler. A successful Node connection with `ssl: "require"` does not prove certificate verification: this driver's Node path does not verify the server certificate in that mode. Validate the Hyperdrive connection on the hosted Worker before domain cutover.
+
+
+## Current preview and verification record
+
+The parallel preview is [secret-mission.chinniradhika98.workers.dev](https://secret-mission.chinniradhika98.workers.dev). It was deployed through the authorized local Cloudflare CLI; GitHub deployment automation still needs its dedicated repository token. The previously verified deployment version was `0b547756-b278-4a22-b1ee-1178fa5b40b6`. This is a historical verification record, not a claim that the current branch head is deployed.
+
+The preview contains the earlier hosting migration and integrated game code. The private inbox and optional email application feature in [PR #3](https://github.com/nwokoloafam/secret-mission/pull/3) is not deployed there. The notification migration has not been applied to production, and no email scheduler or live email delivery has been activated. Opening the existing preview verifies the hosting path, not the new notification feature. The primary domain remains on Vercel. A fresh HTTP check on November 21, 2026 found the signup form, no email-consent text, and no server-error marker.
+
+For a review, distinguish three checks: automated tests/builds for the PR commit, the version actually deployed to the preview, and a complete isolated gameplay rehearsal. A successful signup-page smoke check does not prove photo uploads, eliminations, private updates, or real-phone interaction performance.
+
+## Optional email scheduler infrastructure
+
+The application endpoint, inbox, email provider integration, and database migration belong to PR #3. The Cloudflare runtime bindings and independent scheduler belong to this hosting PR. This branch can build without PR #3, but **do not deploy or activate the scheduler until the notification endpoint and migration are available and verified**.
+
+The website's notification bindings default to `NOTIFICATIONS_ENABLED=false` and `EMAIL_MODE=off`. GitHub deployment passes the nonsecret repository variables `NOTIFICATIONS_ENABLED`, `EMAIL_MODE`, `EMAIL_APP_URL`, `EMAIL_DAILY_LIMIT`, and `EMAIL_FROM`. Keep manual deployments consistent with them. Configure `EMAIL_DISPATCH_SECRET` as a runtime secret only when email preview/live mode is enabled; live mode also requires the runtime `BREVO_API_KEY` secret. Do not store those values in source or public variables. Use one canonical game origin for `EMAIL_APP_URL`.
+
+A separate Worker lives in `workers/email-scheduler/`:
+
+```sh
+npm run build:email-scheduler
+# After provisioning the scheduler's EMAIL_DISPATCH_SECRET:
+EMAIL_APP_URL=https://secret-mission.chinniradhika98.workers.dev npm run deploy:email-scheduler
+```
+
+Its own configuration, output folder, and explicit Worker name prevent overwriting the website. A minute cron calls up to three bounded batches on the authenticated application endpoint. For first setup, supply the dispatch secret through the CLI's secrets-file option from an ignored/private file or the Cloudflare dashboard; it must match the website secret. The scheduler only needs that dispatch secret, never database or Brevo credentials. CI builds and tests it but does not deploy it. Initial provisioning and every scheduler update require a separate deployment.
+
+The scheduler is currently unprovisioned and inactive. Enabling optional email requires the application migration and configuration, a verified Brevo sender, and an explicitly opted-in real-recipient test. Provider acceptance does not prove inbox delivery. Keep Vercel and Cloudflare application versions/settings aligned because both write to the shared database.

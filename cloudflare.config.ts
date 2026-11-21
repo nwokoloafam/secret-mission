@@ -28,6 +28,13 @@ export default defineConfig({
       DATABASE_URL: bindings.secret(),
       SUPABASE_URL: bindings.secret(),
       SUPABASE_SERVICE_ROLE_KEY: bindings.secret(),
+      NOTIFICATIONS_ENABLED: bindings.json(process.env.NOTIFICATIONS_ENABLED ?? "false"),
+      EMAIL_MODE: bindings.json(process.env.EMAIL_MODE ?? "off"),
+      EMAIL_APP_URL: bindings.json(process.env.EMAIL_APP_URL ?? "https://secret-mission.chinniradhika98.workers.dev"),
+      EMAIL_DAILY_LIMIT: bindings.json(process.env.EMAIL_DAILY_LIMIT ?? "250"),
+      EMAIL_FROM: bindings.json(process.env.EMAIL_FROM ?? ""),
+      EMAIL_DISPATCH_SECRET: process.env.EMAIL_MODE === "live" || process.env.EMAIL_MODE === "dry-run" ? bindings.secret() : undefined,
+      BREVO_API_KEY: process.env.EMAIL_MODE === "live" ? bindings.secret() : undefined,
     },
   }),
 });

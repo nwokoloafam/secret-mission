@@ -1,4 +1,4 @@
-name: App checks
+name: Cloudflare checks
 
 on:
   workflow_dispatch:
@@ -10,7 +10,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: checks-${{ github.ref }}
+  group: cloudflare-checks-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
@@ -28,6 +28,7 @@ jobs:
       - run: npm run typecheck
       - run: npm run build:cloudflare
       - run: npm run build
+      - run: npm run build:email-scheduler
 
   deploy:
     name: Deploy to Cloudflare
@@ -37,6 +38,11 @@ jobs:
     timeout-minutes: 15
     env:
       CLOUDFLARE_ENABLE_CUSTOM_DOMAIN: ${{ vars.CLOUDFLARE_ENABLE_CUSTOM_DOMAIN || 'false' }}
+      NOTIFICATIONS_ENABLED: ${{ vars.NOTIFICATIONS_ENABLED || 'false' }}
+      EMAIL_MODE: ${{ vars.EMAIL_MODE || 'off' }}
+      EMAIL_APP_URL: ${{ vars.EMAIL_APP_URL || 'https://secret-mission.chinniradhika98.workers.dev' }}
+      EMAIL_DAILY_LIMIT: ${{ vars.EMAIL_DAILY_LIMIT || '250' }}
+      EMAIL_FROM: ${{ vars.EMAIL_FROM || '' }}
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7

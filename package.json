@@ -14,7 +14,9 @@
     "build:cloudflare": "vite build",
     "preview:cloudflare": "vite preview",
     "deploy:cloudflare": "npm run build:cloudflare && cf deploy --prebuilt",
-    "check:cloudflare": "vinext check"
+    "check:cloudflare": "vinext check",
+    "build:email-scheduler": "cd workers/email-scheduler && vite build",
+    "deploy:email-scheduler": "npm run build:email-scheduler && cd workers/email-scheduler && cf deploy --prebuilt --worker secret-mission-email-scheduler --no-provision"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.119.0",

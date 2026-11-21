@@ -1,6 +1,7 @@
 import { defineConfig } from "vitest/config";
+import { fileURLToPath } from "node:url";
 
-// Engine tests run in Node independently of the Cloudflare build plugin.
 export default defineConfig({
-  test: { environment: "node", include: ["src/**/*.test.ts"] },
+  resolve: { alias: { "@": fileURLToPath(new URL("./src", import.meta.url)) } },
+  test: { environment: "node", include: ["src/**/*.test.ts", "workers/**/*.test.ts"] },
 });

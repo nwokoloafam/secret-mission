@@ -4,3 +4,14 @@
 DATABASE_URL=
 SUPABASE_URL=
 SUPABASE_SERVICE_ROLE_KEY=
+
+# Apply 0003_notifications.sql before enabling. Off by default.
+NOTIFICATIONS_ENABLED=false
+# off | dry-run (local previews only) | live (requires verified Brevo sender)
+EMAIL_MODE=off
+EMAIL_APP_URL=https://secret-mission.chinniradhika98.workers.dev
+EMAIL_DAILY_LIMIT=250
+EMAIL_FROM=
+BREVO_API_KEY=
+# Generate a random secret of at least 32 characters; never use a player/admin token.
+EMAIL_DISPATCH_SECRET=
