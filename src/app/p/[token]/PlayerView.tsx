@@ -28,6 +28,8 @@ export interface PlayerViewData {
   token: string;
   me: {
     id: string;
+    emailOptIn: boolean;
+    email: string | null;
     firstName: string;
     photoUrl: string | null;
     status: string;
@@ -60,6 +62,8 @@ export interface PlayerViewData {
   broadcast: string | null;
   notifications: InboxNotification[];
   notificationsEnabled: boolean;
+  emailAvailable: boolean;
+  emailPreview: boolean;
 }
 
 export function PlayerView({ data }: { data: PlayerViewData }) {
@@ -159,10 +163,10 @@ export function PlayerView({ data }: { data: PlayerViewData }) {
 
       <div className="card">
         <h3>Save your personal link</h3>
-        <p className="muted small">Copy or save this link, and check your personal page for the latest targets, announcements, and game updates.</p>
+        <p className="muted small">Copy or save this link so you can return to your game page and see your latest updates.</p>
         <SaveLink token={data.token} />
       </div>
-      {data.notificationsEnabled && <Notifications token={data.token} notifications={data.notifications} />}
+      {data.notificationsEnabled && <Notifications token={data.token} notifications={data.notifications} emailAvailable={data.emailAvailable} emailPreview={data.emailPreview} emailOptIn={me.emailOptIn} email={me.email} />}
       <PhotoUpdate data={data} />
     </main>
   );

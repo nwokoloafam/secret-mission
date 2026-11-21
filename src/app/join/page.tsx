@@ -2,6 +2,7 @@ import Link from "next/link";
 import { connection } from "next/server";
 import { COPY } from "@/lib/copy";
 import { currentGame } from "@/lib/db/queries";
+import { emailAvailable, emailPreview } from "@/lib/notifications";
 import { JoinForm } from "./JoinForm";
 
 export default async function JoinPage() {
@@ -17,7 +18,7 @@ export default async function JoinPage() {
             Takes a minute.{" "}
             <Link href="/how">How the game works</Link>
           </p>
-          <JoinForm />
+          <JoinForm emailAvailable={emailAvailable()} emailPreview={emailPreview()} />
         </>
       ) : (
         <p className="muted">Sign-ups aren&apos;t open yet.</p>

@@ -52,3 +52,7 @@ npm test                     # game engine tests
 ## Personal updates
 
 See [notification setup and local rehearsal](docs/notifications.md) for the private in-page inbox, database migration, and multi-player tests. Optional email is a separate follow-up. The feature is off until its migration and deployment settings are configured.
+
+## Optional email follow-up
+
+See [optional email setup](docs/email.md) for the separate Brevo extension and `0004_email_notifications.sql`. In-page notifications work without this extension or a provider account.

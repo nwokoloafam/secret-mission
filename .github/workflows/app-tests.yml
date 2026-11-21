@@ -27,6 +27,7 @@ jobs:
           --health-cmd "pg_isready -U postgres"
           --health-interval 5s --health-timeout 5s --health-retries 10
     env:
+      TEST_DATABASE_URL: postgres://postgres:ci-only@127.0.0.1:5432/secret_mission_notifications_test
       CORE_TEST_DATABASE_URL: postgres://postgres:ci-only@127.0.0.1:5432/secret_mission_notifications_coretest
     steps:
       - uses: actions/checkout@v7
@@ -40,7 +41,7 @@ jobs:
           node --input-type=module <<'JS'
           import postgres from 'postgres';
           const sql = postgres('postgres://postgres:ci-only@127.0.0.1:5432/postgres');
-          for (const name of ['secret_mission_notifications_coretest']) {
+          for (const name of ['secret_mission_notifications_test', 'secret_mission_notifications_coretest']) {
             await sql.unsafe('create database ' + name);
           }
           await sql.end();
