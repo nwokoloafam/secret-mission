@@ -12,8 +12,7 @@ import { db } from "@/lib/db/client";
 import { runAction, runTick } from "@/lib/db/games";
 import { currentGame, gameByAdminToken, newToken, playerByToken } from "@/lib/db/queries";
 import { uploadPhoto } from "@/lib/photos";
-import { emailAvailable, insertNotifications, notificationsEnabled, validEmail } from "@/lib/notifications";
-import { scheduleEmailDispatch } from "@/lib/email/background";
+import { insertNotifications, notificationsEnabled } from "@/lib/notifications";
 
 export type Result = { ok: true; message?: string; data?: Record<string, unknown> } | { ok: false; error: string };
 
@@ -22,7 +21,6 @@ const fail = (error: string): Result => ({ ok: false, error });
 async function wrap(fn: () => Promise<Result | void>): Promise<Result> {
   try {
     const r = (await fn()) ?? { ok: true as const };
-    if (r.ok) scheduleEmailDispatch();
     refresh();
     return r;
   } catch (e) {
@@ -72,11 +70,6 @@ export async function signUp(_: Result | null, form: FormData): Promise<Result> 
   if (!firstName) return fail("Add your first name.");
   if (!how) return fail("Tell us how you know Afam.");
 
-  const optIn = form.get("emailOptIn") === "on";
-  const email = clean(form.get("email"), 255).toLowerCase();
-  if (optIn && !notificationsEnabled()) return fail("Email updates are unavailable right now.");
-  if (optIn && !emailAvailable()) return fail("Email updates are unavailable right now.");
-  if ((optIn || email) && !validEmail(email)) return fail("Enter a valid email address.");
   const game = await currentGame();
   if (!game) return fail("Sign-ups aren't open yet.");
 
@@ -92,17 +85,11 @@ export async function signUp(_: Result | null, form: FormData): Promise<Result> 
 
   const token = newToken();
   await db().begin(async (tx) => {
-    if (notificationsEnabled()) {
-      const [p] = await tx`insert into players (game_id, token, first_name, photo_url, how_know_afam, email, email_opt_in, email_consent_at)
-        values (${game.id}, ${token}, ${firstName}, ${photoUrl}, ${how}, ${email || null}, ${optIn}, ${optIn ? new Date().toISOString() : null}) returning id`;
-      await insertNotifications(tx, game.id, [{ playerId: p.id as string, kind: "personal_link", message: "Your personal game link is ready. Save this page to return." }]);
-    } else {
-      await tx`insert into players (game_id, token, first_name, photo_url, how_know_afam)
-        values (${game.id}, ${token}, ${firstName}, ${photoUrl}, ${how})`;
-    }
+    const [p] = await tx`insert into players (game_id, token, first_name, photo_url, how_know_afam)
+      values (${game.id}, ${token}, ${firstName}, ${photoUrl}, ${how}) returning id`;
+    await insertNotifications(tx, game.id, [{ playerId: p.id as string, kind: "personal_link", message: "Your personal game link is ready. Save this page to return." }]);
   });
   (await cookies()).set("sm_token", token, { maxAge: 60 * 60 * 24 * 60, httpOnly: true, sameSite: "lax", path: "/" });
-  scheduleEmailDispatch();
   redirect(`/p/${token}`);
 }
 
@@ -219,7 +206,7 @@ export async function poltergeistAction(token: string, toId: string, text: strin
 export async function tickAction(gameId: string): Promise<void> {
   try {
     const r = await runTick(gameId);
-    if (r) { scheduleEmailDispatch(); refresh(); }
+    if (r) refresh();
   } catch (e) {
     console.error(e);
   }
@@ -401,7 +388,7 @@ export async function hostTick(admin: string): Promise<void> {
     const g = await gameByAdminToken(admin);
     if (!g) return;
     const r = await runTick(g.id);
-    if (r) { scheduleEmailDispatch(); refresh(); }
+    if (r) refresh();
   } catch (e) {
     console.error(e);
   }

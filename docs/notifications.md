@@ -12,6 +12,8 @@ Starting produces one start notice per player. A round restart preserves inbox h
 
 ## Database migration
 
+Optional email has been removed. Existing installations that applied the former email migration must first deploy this inbox-only version and disable email on other hosts, then apply `0005_remove_email.sql`. It deletes email addresses, consent fields and the email queue while preserving games, players and inbox history. Remove `EMAIL_MODE`, `EMAIL_FROM`, `EMAIL_APP_URL`, `EMAIL_DAILY_LIMIT`, `EMAIL_DISPATCH_SECRET` and `BREVO_API_KEY` from hosting environments, and revoke the project's Brevo key so older deployments cannot send. Keep `NOTIFICATIONS_ENABLED=true` for the in-page inbox.
+
 `supabase/migrations/0003_notifications.sql` adds only `player_notifications`, its inbox index, and row-level security. Each row records its game, player, kind, message, creation time, and optional read time. No player email columns, email queue, or email delivery tables are included. Existing games and players are preserved.
 
 Inbox entries commit in the same transaction as their game action. A failed insert rolls back that action rather than leaving the game and inbox inconsistent. Recipients are scoped to the game; marking updates read authenticates the player's private link and respects the displayed time cutoff.

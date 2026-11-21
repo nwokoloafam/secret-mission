@@ -1,11 +1,8 @@
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import { gameById, hintsTo, latestBroadcast, missionText, playerByToken, playersOf, serverNow } from "@/lib/db/queries";
-import { inboxForPlayer, notificationsEnabled, emailAvailable, emailPreview } from "@/lib/notifications";
+import { inboxForPlayer, notificationsEnabled } from "@/lib/notifications";
 import { PlayerView, type PlayerViewData } from "./PlayerView";
-import { scheduleEmailDispatch } from "@/lib/email/background";
-
-export const maxDuration = 300;
 
 export default async function PlayerPage({ params }: PageProps<"/p/[token]">) {
   await connection();
@@ -34,12 +31,8 @@ export default async function PlayerPage({ params }: PageProps<"/p/[token]">) {
     token,
     notifications,
     notificationsEnabled: enabled,
-    emailAvailable: emailAvailable(),
-    emailPreview: emailPreview(),
     me: {
       id: me.id,
-      emailOptIn: me.email_opt_in,
-      email: me.email,
       firstName: me.first_name,
       photoUrl: me.photo_url,
       status: me.status,
@@ -86,6 +79,5 @@ export default async function PlayerPage({ params }: PageProps<"/p/[token]">) {
     broadcast: (broadcast?.data?.text as string) ?? null,
   };
 
-  scheduleEmailDispatch({ recovery: true });
   return <PlayerView data={data} />;
 }
