@@ -7,6 +7,9 @@ import { sendEmail, type EmailSendResult } from "./provider";
 type ClaimedJob = { id: string; email: string; token: string; kind: string };
 type ClaimResult = { job: ClaimedJob } | { waitMs: number } | { stop: "empty" | "daily_limit" };
 export type DispatchOptions = { env?: EmailEnv; fetch?: typeof fetch; maxBatch?: number; maxDurationMs?: number };
+// Leave 30s for action/connection setup and cleanup within Vercel's 300s
+// Fluid Compute invocation. Thirty full 8s provider timeouts still fit.
+export const EMAIL_DRAIN_DURATION_MS = 270000;
 
 async function claimEmail(sql: postgres.Sql, mode: "dry-run" | "live", dailyLimit: number): Promise<ClaimResult> {
   return await sql.begin(async (tx) => {
@@ -53,8 +56,8 @@ export async function dispatchEmail(sql: postgres.Sql, options: DispatchOptions 
   if (env.NOTIFICATIONS_ENABLED !== "true") return { mode: "off", processed: 0, stopped: "disabled" };
   const config = emailConfig(env);
   if (config.mode === "off") return { mode: "off", processed: 0, stopped: "off" };
-  const maxBatch = Math.max(1, Math.min(20, Math.floor(options.maxBatch ?? 20) || 1));
-  const maxDuration = Math.max(1, Math.min(20000, Math.floor(options.maxDurationMs ?? 20000) || 1));
+  const maxBatch = Math.max(1, Math.min(300, Math.floor(options.maxBatch ?? 300) || 1));
+  const maxDuration = Math.max(1, Math.min(EMAIL_DRAIN_DURATION_MS, Math.floor(options.maxDurationMs ?? EMAIL_DRAIN_DURATION_MS) || 1));
   const started = Date.now();
   let processed = 0;
   let stopped = "time_limit";

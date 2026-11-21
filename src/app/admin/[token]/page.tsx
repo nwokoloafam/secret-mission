@@ -4,6 +4,9 @@ import { connection } from "next/server";
 import { describeEvent } from "@/lib/describe";
 import { allMissions, eventsOf, gameByAdminToken, openDisputes, playersOf, serverNow } from "@/lib/db/queries";
 import { AdminView, type AdminData } from "./AdminView";
+import { scheduleEmailDispatch } from "@/lib/email/background";
+
+export const maxDuration = 300;
 
 export default async function AdminPage({ params }: PageProps<"/admin/[token]">) {
   await connection();
@@ -89,5 +92,6 @@ export default async function AdminPage({ params }: PageProps<"/admin/[token]">)
     },
   };
 
+  scheduleEmailDispatch({ recovery: true });
   return <><AdminView data={data} /><div className="page"><EmailOutbox gameId={game.id} /></div></>;
 }
