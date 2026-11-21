@@ -10,9 +10,8 @@
 
 import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { dirname, resolve } from "node:path";
-import { fileURLToPath, pathToFileURL } from "node:url";
 
-const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+const root = resolve(__dirname, "..");
 const input = resolve(root, "background-info/missions/missions.md");
 const output = resolve(root, "supabase/seed/missions.sql");
 
@@ -54,7 +53,7 @@ on conflict (text) do update
 `;
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
+if (require.main === module) {
   const missions = parseMissions(readFileSync(input, "utf8"));
   if (missions.length === 0) throw new Error(`No missions found in ${input}`);
   mkdirSync(dirname(output), { recursive: true });
