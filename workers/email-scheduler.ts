@@ -11,7 +11,8 @@ export async function dispatchScheduledEmail(env: Env, fetcher: typeof fetch = f
     const response = await fetcher(`${origin.origin}/api/email/dispatch`, {
       method: "POST", redirect: "error",
       headers: { Authorization: `Bearer ${env.EMAIL_DISPATCH_SECRET}` },
-      signal: AbortSignal.timeout(25000),
+      // Match the endpoint's bounded 270s drain plus response overhead.
+      signal: AbortSignal.timeout(285000),
     });
     if (!response.ok) throw new Error("Email dispatcher unavailable");
     const result = await response.json() as { stopped?: string };

@@ -12,7 +12,7 @@ vi.mock("next/server", () => ({ after: mocks.after }));
 
 // The normal React export deliberately does not memoize outside a Server
 // Component render. That is the relevant path for standalone action calls.
-import { db } from "./client.cloudflare";
+import { db, openDb } from "./client.cloudflare";
 
 function client() {
   return {
@@ -34,6 +34,21 @@ afterEach(() => {
 });
 
 describe("Cloudflare database client", () => {
+  it.each([false, true])("opens an independently owned background client (Hyperdrive: %s)", async (hyperdrive) => {
+    if (hyperdrive) mocks.env.HYPERDRIVE = { connectionString: "postgres://proxy:password@hyperdrive.internal:5432/postgres" };
+    const request = db();
+    const background = openDb();
+    expect(background).not.toBe(request);
+    expect(mocks.postgres.mock.calls[1]).toEqual(mocks.postgres.mock.calls[0]);
+    // openDb leaves cleanup to its owner; db keeps its existing after hook.
+    expect(mocks.after).toHaveBeenCalledTimes(1);
+    await mocks.after.mock.calls[0][0]();
+    expect(request.end).toHaveBeenCalledExactlyOnceWith({ timeout: 5 });
+    expect(background.end).not.toHaveBeenCalled();
+    await background.end({ timeout: 5 });
+    expect(background.end).toHaveBeenCalledExactlyOnceWith({ timeout: 5 });
+  });
+
   it("prefers the Hyperdrive binding and preserves prepared statements and default pipelining", async () => {
     const connectionString = "postgres://proxy:password@hyperdrive.internal:5432/postgres";
     mocks.env.HYPERDRIVE = { connectionString };
