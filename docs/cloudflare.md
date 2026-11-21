@@ -66,7 +66,7 @@ Both hosted sites use the same Supabase project, so player records and game acti
 
 **Future step, after the domain cutover and verification below:** disable Vercel automatic Git deployments with `git.deploymentEnabled: false` in `vercel.json`, or have the Vercel project owner disconnect this project's Git integration in **Project → Settings → Git → Connected Git Repository → Disconnect**. Preserve the project and last working deployment for rollback. Do not remove the Vercel GitHub app from unrelated repositories.
 
-Vercel's private-repository author-permission checks may still fail during parallel development. Those are separate from Cloudflare's application checks and deployment; resolve Vercel access with the project owner while keeping its integration enabled. Existing failed statuses are not rewritten. Review any required Vercel status checks when retiring the integration; no repository rules were changed by this migration.
+The repository became public on November 21, 2026, resolving the prior Vercel author-permission blocker on fresh app deployments. Preview access can still require Vercel login/approval; that is separate from deployment permission. Keep the Vercel integration enabled. Older failed statuses are not rewritten. Review any required Vercel status checks when retiring the integration; no repository rules were changed by this migration.
 
 ## Main domain cutover
 
@@ -96,13 +96,13 @@ Both local workerd and the hosted Worker rejected the direct socket connection t
 
 The parallel preview is [secret-mission.chinniradhika98.workers.dev](https://secret-mission.chinniradhika98.workers.dev). It was deployed through the authorized local Cloudflare CLI; GitHub deployment automation still needs its dedicated repository token. The previously verified deployment version was `0b547756-b278-4a22-b1ee-1178fa5b40b6`. This is a historical verification record, not a claim that the current branch head is deployed.
 
-The preview contains the earlier hosting migration and integrated game code. The private inbox and optional email application feature in [PR #3](https://github.com/nwokoloafam/secret-mission/pull/3) is not deployed there. The notification migration has not been applied to production, and no email scheduler or live email delivery has been activated. Opening the existing preview verifies the hosting path, not the new notification feature. The primary domain remains on Vercel. A fresh HTTP check on November 21, 2026 found the signup form, no email-consent text, and no server-error marker.
+The preview contains the earlier hosting migration and integrated game code. The private inbox in [PR #3](https://github.com/nwokoloafam/secret-mission/pull/3) and optional email extension in [PR #4](https://github.com/nwokoloafam/secret-mission/pull/4) are not deployed there. The notification migration has not been applied to production, and no email scheduler or live email delivery has been activated. Opening the existing preview verifies the hosting path, not the new notification feature. The primary domain remains on Vercel. A fresh HTTP check on November 21, 2026 found the signup form, no email-consent text, and no server-error marker.
 
 For a review, distinguish three checks: automated tests/builds for the PR commit, the version actually deployed to the preview, and a complete isolated gameplay rehearsal. A successful signup-page smoke check does not prove photo uploads, eliminations, private updates, or real-phone interaction performance.
 
 ## Optional email scheduler infrastructure
 
-The application endpoint, inbox, email provider integration, and database migration belong to PR #3. The Cloudflare runtime bindings and independent scheduler belong to this hosting PR. This branch can build without PR #3, but **do not deploy or activate the scheduler until the notification endpoint and migration are available and verified**.
+The inbox and migration 0003 belong to PR #3. The email endpoint, provider integration, and separate migration 0004 belong to deferred PR #4. The Cloudflare runtime bindings and independent scheduler belong to this hosting PR. This branch can build without either application PR, but **do not deploy or activate the scheduler until the notification endpoint and migration are available and verified**.
 
 The website's notification bindings default to `NOTIFICATIONS_ENABLED=false` and `EMAIL_MODE=off`. GitHub deployment passes the nonsecret repository variables `NOTIFICATIONS_ENABLED`, `EMAIL_MODE`, `EMAIL_APP_URL`, `EMAIL_DAILY_LIMIT`, and `EMAIL_FROM`. Keep manual deployments consistent with them. Configure `EMAIL_DISPATCH_SECRET` as a runtime secret only when email preview/live mode is enabled; live mode also requires the runtime `BREVO_API_KEY` secret. Do not store those values in source or public variables. Use one canonical game origin for `EMAIL_APP_URL`.
 
