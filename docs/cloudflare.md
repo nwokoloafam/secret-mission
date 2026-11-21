@@ -2,6 +2,8 @@
 
 This branch adds a Cloudflare Workers deployment alongside the existing Next.js / Vercel deployment. It does not change DNS, game rules, page design, or the database schema. Afam can keep working on the application and the existing `npm run dev` / `npm run build` commands.
 
+Cloudflare deployment is currently paused while Vercel remains the active host. CI still validates the builds, but the deployment job runs only when the GitHub repository variable `CLOUDFLARE_DEPLOY_ENABLED` is exactly `true`. To resume later, configure the deployment token and runtime settings below, set that variable, and run the workflow on `main`. This gate does not affect Vercel, DNS, or an already-deployed Worker.
+
 ## Local prerequisites
 
 Use Node 24.22+ (the version in `.nvmrc`); the new Cloudflare CLI requires a more recent Node patch than the original project. Run `npm ci`.
