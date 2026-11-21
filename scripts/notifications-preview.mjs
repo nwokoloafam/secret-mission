@@ -18,12 +18,10 @@ try {
   }
   const [game] = await sql`insert into games (name, admin_token) values ('Local notification rehearsal', 'rehearsal-host')
     on conflict (admin_token) do update set name = excluded.name returning id`;
-  for (const [i, name] of ["Alice", "Bob", "Charlie", "Dina", "Eli", "Farah", "Gus", "Hana"].entries()) {
-    const optedIn = i % 2 === 0;
-    await sql`insert into players (game_id, token, first_name, how_know_afam, status, email, email_opt_in, email_consent_at)
-      values (${game.id}, ${`rehearsal-${name.toLowerCase()}`}, ${name}, 'Rehearsal guest', 'checked_in',
-        ${optedIn ? `${name.toLowerCase()}@example.test` : null}, ${optedIn}, ${optedIn ? new Date() : null})
+  for (const name of ["Alice", "Bob", "Charlie", "Dina", "Eli", "Farah", "Gus", "Hana"]) {
+    await sql`insert into players (game_id, token, first_name, how_know_afam, status)
+      values (${game.id}, ${`rehearsal-${name.toLowerCase()}`}, ${name}, 'Rehearsal guest', 'checked_in')
       on conflict (token) do nothing`;
   }
-  console.log("Local rehearsal ready: /admin/rehearsal-host and /p/rehearsal-alice (also bob, charlie, dina, eli, farah, gus, hana). No real emails.");
+  console.log("Local rehearsal ready: /admin/rehearsal-host and /p/rehearsal-alice (also bob, charlie, dina, eli, farah, gus, hana).");
 } finally { await sql.end(); }

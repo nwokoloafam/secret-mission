@@ -49,6 +49,6 @@ npm run dev                  # http://localhost:3000
 npm test                     # game engine tests
 ```
 
-## Personal updates and optional email
+## Personal updates
 
-See [notification setup and local rehearsal](docs/notifications.md) for the private in-page inbox, optional Brevo emails, preview mode, database migration, tests, and independent delivery worker. The feature is off until its migration and deployment settings are configured.
+See [notification setup and local rehearsal](docs/notifications.md) for the private in-page inbox, database migration, and multi-player tests. Optional email is a separate follow-up. The feature is off until its migration and deployment settings are configured.
