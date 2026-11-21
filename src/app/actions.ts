@@ -283,6 +283,30 @@ export async function hostRemove(admin: string, playerId: string): Promise<Resul
   return wrap(async () => void (await host(admin, (s, c) => E.removePlayer(s, c, playerId, "removed"))));
 }
 
+/** Fully delete a player (test sign-ups, duplicates). Blocked for anyone still in a running game. */
+export async function hostDeletePlayer(admin: string, playerId: string): Promise<Result> {
+  return wrap(async () => {
+    const g = await asHost(admin);
+    const name = await db().begin(async (tx) => {
+      await tx`set local lock_timeout = '5s'`;
+      const [game] = await tx`select status from games where id = ${g.id} for update`;
+      const [p] = await tx`select first_name, status from players where id = ${playerId} and game_id = ${g.id} for update`;
+      if (!p) throw new GameError("no_player", "That player is already gone.");
+      const running = game.status === "active" || game.status === "paused";
+      if (running && ["alive", "eliminated", "checked_in"].includes(p.status as string)) {
+        throw new GameError("in_game", "They're in the running game. Use Remove (left) instead.");
+      }
+      await tx`update players set target_id = null where target_id = ${playerId}`;
+      await tx`update players set out_by = null where out_by = ${playerId}`;
+      await tx`update players set bet_on_id = null where bet_on_id = ${playerId}`;
+      await tx`update games set winner_id = null where winner_id = ${playerId}`;
+      await tx`delete from players where id = ${playerId}`;
+      return p.first_name as string;
+    });
+    return { ok: true, message: `${name} deleted.` };
+  });
+}
+
 export async function hostMove(admin: string, playerId: string, awayFromId: string | null): Promise<Result> {
   return wrap(async () => {
     await host(admin, (s, c) => E.movePlayer(s, c, playerId, awayFromId ?? undefined));

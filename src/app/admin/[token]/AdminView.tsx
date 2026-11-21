@@ -13,6 +13,7 @@ import {
   hostPause,
   hostPlayAgain,
   hostRemove,
+  hostDeletePlayer,
   hostResolveDispute,
   hostResume,
   hostSendHint,
@@ -295,6 +296,7 @@ function PlayerActions({ data, p }: { data: AdminData; p: AdminPlayer }) {
   const [hint, setHint] = useState(p.customHint ?? "");
   const [away, setAway] = useState("");
   const [confirmRemove, setConfirmRemove] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const a = useAction();
   const alive = p.status === "alive";
   const link = typeof window !== "undefined" ? `${window.location.origin}/p/${p.token}` : `/p/${p.token}`;
@@ -325,6 +327,15 @@ function PlayerActions({ data, p }: { data: AdminData; p: AdminPlayer }) {
             onClick={() => (confirmRemove ? a.run(() => hostRemove(t, p.id)) : setConfirmRemove(true))}
           >
             {confirmRemove ? "Tap again to remove" : "Remove (left)"}
+          </Btn>
+        )}
+        {(!["active", "paused"].includes(data.game.status) || ["registered", "left"].includes(p.status)) && (
+          <Btn
+            kind="small"
+            pending={a.pending}
+            onClick={() => (confirmDelete ? a.run(() => hostDeletePlayer(t, p.id)) : setConfirmDelete(true))}
+          >
+            {confirmDelete ? "Tap again: delete for good" : "🗑️ Delete"}
           </Btn>
         )}
       </div>
