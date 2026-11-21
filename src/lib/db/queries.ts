@@ -37,9 +37,6 @@ export interface PlayerRow {
   bet_on_id: string | null;
   poltergeist_used: boolean;
   sms_opt_in: boolean;
-  email: string | null;
-  email_opt_in: boolean;
-  email_consent_at: Date | null;
   created_at: Date;
 }
 
