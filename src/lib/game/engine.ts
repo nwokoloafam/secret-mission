@@ -279,14 +279,24 @@ function joinCutoffReached(d: Draft): boolean {
 }
 
 /** Afam hits Start: shuffle checked-in players into one loop. */
-export function startGame(state: GameState, ctx: Ctx, opts: { durationMinutes?: number; duplicateAcknowledgment?: string } = {}): ActionResult {
+export function startGame(state: GameState, ctx: Ctx, opts: {
+  durationMinutes?: number;
+  capacityAcknowledgment?: { mode: "unique" | "duplicate"; signature: string };
+  /** Compatibility for existing callers that acknowledged duplicate mode before swap-buffer warnings. */
+  duplicateAcknowledgment?: string;
+} = {}): ActionResult {
   const d = new Draft(state, ctx);
   if (d.game.status !== "setup") throw new GameError("already_started", "The game has already started.");
   const ready = d.state.players.filter((p) => p.status === "checked_in");
   if (ready.length < 3) throw new GameError("too_few", "Need at least 3 checked-in players to start.");
   const capacity = missionCapacity(d.state);
-  if (capacity.requiresDuplicates && opts.duplicateAcknowledgment !== capacity.acknowledgment) {
-    throw new GameError("duplicate_ack_required", "There aren't enough unique tasks for this player count and the early-game difficulty limit. Review the task warning and explicitly acknowledge sharing tasks across players before starting.");
+  const duplicateAcknowledged = (opts.capacityAcknowledgment?.mode === "duplicate" && opts.capacityAcknowledgment.signature === capacity.acknowledgment)
+    || opts.duplicateAcknowledgment === capacity.acknowledgment;
+  if (capacity.requiresDuplicates && !duplicateAcknowledged) {
+    throw new GameError("duplicate_ack_required", "There aren't enough unique tasks for the baseline round. Review the task warning and explicitly acknowledge sharing tasks across players before starting.");
+  }
+  if (!capacity.requiresDuplicates && capacity.bufferShort && !(opts.capacityAcknowledgment?.mode === "unique" && opts.capacityAcknowledgment.signature === capacity.acknowledgment)) {
+    throw new GameError("swap_buffer_ack_required", "The pool covers the no-repeat game but not the estimated swap buffer. Acknowledge starting without the full swap buffer.");
   }
   d.settings.missionMode = capacity.requiresDuplicates ? "duplicate" : "unique";
 

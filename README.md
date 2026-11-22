@@ -40,6 +40,8 @@ Hosting: Vercel (auto-deploys `main`). Database and photos: Supabase.
 
 Missions are also editable from the admin page. During a running or paused round, issued task text is protected; add a new task or wait until the round ends to change it. Capitalization and whitespace corrections are allowed.
 
+Before starting, task capacity plans for swaps by assuming about half of checked-in players use one. The admin sees separate baseline and buffered counts for early-game Easy/Medium and late-game Hard tasks. For 33 players with the default five-player Hard threshold, the baseline is 60 Easy/Medium plus 4 Hard; the buffered estimate is 77 Easy/Medium plus 4 Hard. If the pool meets the baseline but not the buffer, the host can acknowledge starting in no-repeat mode and add tasks during play if swaps exhaust the pool.
+
 ## Running locally (optional)
 
 ```bash
