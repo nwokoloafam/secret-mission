@@ -7,7 +7,8 @@ import { cookies } from "next/headers";
 import { refresh } from "next/cache";
 import { redirect } from "next/navigation";
 import * as E from "@/lib/game/engine";
-import { ActionResult, Ctx, GameError, GameState } from "@/lib/game/types";
+import { ActionResult, Ctx, DEFAULT_SETTINGS, GameError, GameState, type Settings } from "@/lib/game/types";
+import { normalizeMissionText } from "@/lib/game/mission-pool";
 import { db } from "@/lib/db/client";
 import { runAction, runTick } from "@/lib/db/games";
 import { currentGame, gameByAdminToken, newToken, playerByToken } from "@/lib/db/queries";
@@ -216,10 +217,11 @@ export async function tickAction(gameId: string): Promise<void> {
 // Host (Afam) actions
 // ─────────────────────────────────────────────
 
-export async function hostStart(admin: string, durationMinutes: number): Promise<Result> {
+export async function hostStart(admin: string, durationMinutes: number, duplicateAcknowledgment?: string): Promise<Result> {
   return wrap(async () => {
     const mins = Math.max(15, Math.min(600, Math.round(durationMinutes) || 150));
-    await host(admin, (s, c) => E.startGame(s, c, { durationMinutes: mins }));
+    await host(admin, (s, c) => E.startGame(s, c, { durationMinutes: mins,
+      duplicateAcknowledgment: typeof duplicateAcknowledgment === "string" ? duplicateAcknowledgment : undefined }));
     return { ok: true, message: "Game started." };
   });
 }
@@ -276,12 +278,23 @@ export async function hostDeletePlayer(admin: string, playerId: string): Promise
     const g = await asHost(admin);
     const name = await db().begin(async (tx) => {
       await tx`set local lock_timeout = '5s'`;
-      const [game] = await tx`select status from games where id = ${g.id} for update`;
-      const [p] = await tx`select first_name, status from players where id = ${playerId} and game_id = ${g.id} for update`;
+      const [game] = await tx`select status, settings from games where id = ${g.id} for update`;
+      const [p] = await tx`select first_name, status, mission_id, missions_seen from players where id = ${playerId} and game_id = ${g.id} for update`;
       if (!p) throw new GameError("no_player", "That player is already gone.");
       const running = game.status === "active" || game.status === "paused";
       if (running && ["alive", "eliminated", "checked_in"].includes(p.status as string)) {
         throw new GameError("in_game", "They're in the running game. Use Remove (left) instead.");
+      }
+      // A deleted player's tasks stay spent until round reset. This also
+      // preserves history from rounds started before the game-level ledger.
+      if (running) {
+        const settings: Settings = { ...DEFAULT_SETTINGS, ...(game.settings as Partial<Settings>) };
+        const ids = [...new Set([...(p.missions_seen as string[] ?? []), ...(p.mission_id ? [p.mission_id as string] : [])])];
+        const tasks = ids.length ? await tx`select text from missions where id = any(${ids}::uuid[])` : [];
+        settings.usedMissionIds = [...new Set([...settings.usedMissionIds, ...ids])];
+        settings.usedMissionTexts = [...new Set([...settings.usedMissionTexts, ...tasks.map(m => normalizeMissionText(m.text as string)),
+          ...(settings.playerMissionTexts[playerId] ?? [])])];
+        await tx`update games set settings = ${tx.json(JSON.parse(JSON.stringify(settings)))} where id = ${g.id}`;
       }
       await tx`update players set target_id = null where target_id = ${playerId}`;
       await tx`update players set out_by = null where out_by = ${playerId}`;
@@ -415,7 +428,29 @@ export async function hostEditMission(admin: string, id: string, text: string, d
     const t = text.trim().slice(0, 200);
     const d = ["E", "M", "H"].includes(difficulty) ? difficulty : "M";
     if (!t) return fail("Mission can't be empty.");
-    await db()`update missions set text = ${t}, difficulty = ${d} where id = ${id}`;
+    await db().begin(async (tx) => {
+      await tx`select set_config('lock_timeout', '5s', true),
+                      set_config('statement_timeout', '10s', true),
+                      set_config('idle_in_transaction_session_timeout', '15s', true)`;
+      // Acquire the catalog's write lock before inspecting history. Allocation
+      // holds SHARE until its ledger commits; do not lock game rows here.
+      await tx`lock table missions in row exclusive mode`;
+      const [mission] = await tx`select text from missions where id = ${id}`;
+      if (!mission) throw new GameError("no_mission", "That task no longer exists.");
+      if (normalizeMissionText(mission.text as string) !== normalizeMissionText(t)) {
+        const [issued] = await tx`
+          select 1 from games g
+          where g.status in ('active', 'paused') and (
+            coalesce(g.settings -> 'usedMissionIds', '[]'::jsonb) ? ${id}
+            or exists (
+              select 1 from players p where p.game_id = g.id
+              and (p.mission_id = ${id}::uuid or ${id}::uuid = any(p.missions_seen))
+            )
+          ) limit 1`;
+        if (issued) throw new GameError("mission_in_use", "This task has already been issued in a running round. Add a new task, or wait until the round ends before changing its text.");
+      }
+      await tx`update missions set text = ${t}, difficulty = ${d} where id = ${id}`;
+    });
     return { ok: true, message: "Saved." };
   });
 }

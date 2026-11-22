@@ -38,7 +38,7 @@ Hosting: Vercel (auto-deploys `main`). Database and photos: Supabase.
 2. Run `npm run seed:missions` (regenerates `supabase/seed/missions.sql`).
 3. Paste that file into the Supabase SQL Editor and run it. Existing missions are updated, new ones added, nothing is deleted.
 
-Missions are also editable from the admin page during the game.
+Missions are also editable from the admin page. During a running or paused round, issued task text is protected; add a new task or wait until the round ends to change it. Capitalization and whitespace corrections are allowed.
 
 ## Running locally (optional)
 

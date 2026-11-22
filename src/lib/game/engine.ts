@@ -20,6 +20,9 @@ import {
   OutReason,
   Player,
 } from "./types";
+import { distinctMissions, missionCapacity, normalizeMissionText, recordExistingMissionHistory } from "./mission-pool";
+export { getMissionCapacity, missionCapacity } from "./mission-pool";
+export type { MissionCapacity } from "./mission-pool";
 
 // ─────────────────────────────────────────────
 // Draft: a working copy of the state plus everything the action produced
@@ -36,6 +39,7 @@ class Draft {
     public ctx: Ctx,
   ) {
     this.state = structuredClone(state);
+    recordExistingMissionHistory(this.state);
   }
 
   get game() {
@@ -92,13 +96,25 @@ class Draft {
   assignMission(p: Player) {
     const allowHard = this.alive().length <= this.settings.hardMissionsAtAlive;
     const pool = this.state.missions.filter((m) => m.active && (allowHard || m.difficulty !== "H"));
-    if (pool.length === 0) throw new GameError("no_missions", "There are no active missions.");
-    let fresh = pool.filter((m) => !p.missionsSeen.includes(m.id) && m.id !== p.missionId);
-    if (fresh.length === 0) fresh = pool.filter((m) => m.id !== p.missionId);
-    if (fresh.length === 0) fresh = pool;
+    const personalTexts = new Set(this.settings.playerMissionTexts[p.id] ?? []);
+    const personalFresh = distinctMissions(pool.filter((m) =>
+      !p.missionsSeen.includes(m.id) && m.id !== p.missionId && !personalTexts.has(normalizeMissionText(m.text)),
+    ));
+    const usedIds = new Set(this.settings.usedMissionIds);
+    const usedTexts = new Set(this.settings.usedMissionTexts);
+    const globallyFresh = personalFresh.filter((m) => !usedIds.has(m.id) && !usedTexts.has(normalizeMissionText(m.text)));
+    const fresh = globallyFresh.length || this.settings.missionMode === "unique" ? globallyFresh : personalFresh;
+    if (fresh.length === 0) {
+      throw new GameError("no_fresh_missions", `No new eligible task is available. Ask the host to add or activate a new task${allowHard ? "" : " at easy or medium difficulty"}. This action has not been applied.`);
+    }
     const m: Mission = this.pick(fresh);
     p.missionId = m.id;
     if (!p.missionsSeen.includes(m.id)) p.missionsSeen.push(m.id);
+    if (!usedIds.has(m.id)) this.settings.usedMissionIds.push(m.id);
+    const text = normalizeMissionText(m.text);
+    if (!usedTexts.has(text)) this.settings.usedMissionTexts.push(text);
+    personalTexts.add(text);
+    this.settings.playerMissionTexts[p.id] = [...personalTexts];
   }
 
   /** A player's target changed: new mission + notification. */
@@ -263,11 +279,16 @@ function joinCutoffReached(d: Draft): boolean {
 }
 
 /** Afam hits Start: shuffle checked-in players into one loop. */
-export function startGame(state: GameState, ctx: Ctx, opts: { durationMinutes?: number } = {}): ActionResult {
+export function startGame(state: GameState, ctx: Ctx, opts: { durationMinutes?: number; duplicateAcknowledgment?: string } = {}): ActionResult {
   const d = new Draft(state, ctx);
   if (d.game.status !== "setup") throw new GameError("already_started", "The game has already started.");
   const ready = d.state.players.filter((p) => p.status === "checked_in");
   if (ready.length < 3) throw new GameError("too_few", "Need at least 3 checked-in players to start.");
+  const capacity = missionCapacity(d.state);
+  if (capacity.requiresDuplicates && opts.duplicateAcknowledgment !== capacity.acknowledgment) {
+    throw new GameError("duplicate_ack_required", "There aren't enough unique tasks for this player count and the early-game difficulty limit. Review the task warning and explicitly acknowledge sharing tasks across players before starting.");
+  }
+  d.settings.missionMode = capacity.requiresDuplicates ? "duplicate" : "unique";
 
   // Fisher–Yates shuffle
   const order = [...ready];
@@ -287,7 +308,7 @@ export function startGame(state: GameState, ctx: Ctx, opts: { durationMinutes?: 
   d.game.targetEndAt = new Date(d.now.getTime() + minutes * 60_000);
   for (const p of order) d.assignMission(p);
 
-  d.event("start", null, null, { players: order.length, durationMinutes: minutes });
+  d.event("start", null, null, { players: order.length, durationMinutes: minutes, missionMode: d.settings.missionMode });
   d.notify(null, "game_started");
   return d.result();
 }
@@ -527,6 +548,10 @@ export function resetGame(state: GameState, ctx: Ctx): ActionResult {
   d.game.pausedAt = null;
   d.game.endedAt = null;
   d.game.winnerId = null;
+  d.settings.usedMissionIds = [];
+  d.settings.usedMissionTexts = [];
+  d.settings.playerMissionTexts = {};
+  d.settings.missionMode = "duplicate";
   d.event("reset", null, null, { players: d.state.players.filter((p) => p.status === "checked_in").length });
   d.notify(null, "game_started");
   return d.result();
@@ -627,11 +652,24 @@ export function tick(state: GameState, ctx: Ctx): ActionResult | null {
     if (!q.queuedAt || d.now.getTime() - q.queuedAt.getTime() < waitMs) continue;
     const alive = d.alive();
     if (alive.length === 0) break;
-    const a = d.pick(alive);
-    d.spliceAfter(a, q);
-    d.enterLoop(q, true);
-    if (a.targetId !== a.id) d.newTarget(a);
-    d.event("splice", null, q.id, { after: a.id, via: "fallback" });
+    // Allocate the complete splice on a separate draft. Exhaustion must not
+    // leave half a splice behind or block unrelated actions and host recovery.
+    const attempt = new Draft(d.state, ctx);
+    const a = attempt.pick(attempt.alive());
+    const newcomer = attempt.player(q.id);
+    try {
+      attempt.spliceAfter(a, newcomer);
+      attempt.enterLoop(newcomer, true);
+      if (a.targetId !== a.id) attempt.newTarget(a);
+      attempt.event("splice", null, newcomer.id, { after: a.id, via: "fallback" });
+    } catch (error) {
+      if (error instanceof GameError && error.code === "no_fresh_missions") continue;
+      throw error;
+    }
+    d.state = attempt.state;
+    d.events.push(...attempt.events);
+    d.hints.push(...attempt.hints);
+    d.notifications.push(...attempt.notifications);
   }
 
   return d.events.length ? d.result() : null;

@@ -11,9 +11,11 @@ vi.mock("next/headers", () => ({ cookies: vi.fn() }));
 vi.mock("next/navigation", () => ({ redirect: vi.fn() }));
 vi.mock("@/lib/photos", () => ({ uploadPhoto: vi.fn() }));
 
-import { runAction } from "./db/games";
-import { startGame, removePlayer, endGame, resetGame } from "./game/engine";
-import { hostBroadcast } from "@/app/actions";
+import { getState, runAction } from "./db/games";
+import { startGame, removePlayer, endGame, resetGame, reroll, pauseGame } from "./game/engine";
+import { missionCapacity } from "./game/mission-pool";
+import { hostBroadcast, hostDeletePlayer, hostEditMission, hostStart } from "@/app/actions";
+import { missionText } from "./db/queries";
 import { markNotificationsRead } from "@/app/notification-actions";
 import { inboxForPlayer } from "./notifications";
 
@@ -36,7 +38,7 @@ suite("notifications database integration", () => {
   afterAll(async () => { if (holder.sql) await holder.sql.end(); });
   beforeEach(async () => {
     await holder.sql.unsafe("truncate player_notifications, events, hints, disputes, players, games, missions cascade");
-    await holder.sql`insert into missions(text) values ('task one'), ('task two'), ('task three')`;
+    await holder.sql`insert into missions(text) select 'task ' || n from generate_series(1, 12) n`;
     const [g] = await holder.sql`insert into games(name,admin_token) values ('test','admin') returning id`;
     game = g.id;
     const [g2] = await holder.sql`insert into games(name,admin_token) values ('other','other') returning id`;
@@ -130,6 +132,140 @@ suite("notifications database integration", () => {
     expect((await hostBroadcast("admin", "Thirty-person update")).ok).toBe(true);
     expect(await holder.sql`select id from player_notifications where game_id=${game} and kind='announcement'`).toHaveLength(30);
     expect(await holder.sql`select id from player_notifications where game_id=${otherGame}`).toHaveLength(0);
+  });
+
+  it("requires fresh host acknowledgment before starting a short-pool game in duplicate mode", async () => {
+    await holder.sql`delete from missions where text not in ('task 1','task 2','task 3')`;
+    expect((await hostStart("bad-admin", 150)).ok).toBe(false);
+    expect((await hostStart("admin", 150)).ok).toBe(false);
+    expect((await getState(game)).game.status).toBe("setup");
+    expect(await holder.sql`select id from events where game_id=${game}`).toHaveLength(0);
+    expect(await holder.sql`select id from player_notifications where game_id=${game}`).toHaveLength(0);
+
+    const stale = missionCapacity(await getState(game)).acknowledgment;
+    await holder.sql`insert into players(game_id,token,first_name,status) values (${game},'late-checkin','Late','checked_in')`;
+    expect((await hostStart("admin", 150, stale)).ok).toBe(false);
+    const current = missionCapacity(await getState(game)).acknowledgment;
+    expect((await hostStart("admin", 150, current)).ok).toBe(true);
+    const started = await getState(game);
+    expect(started.game.settings.missionMode).toBe("duplicate");
+    expect(started.game.status).toBe("active");
+    expect(started.players).toHaveLength(5);
+    expect(new Set(started.players.map(p => p.missionId)).size).toBeLessThan(5);
+    expect(started.players.every(p => p.missionsSeen.length === 1)).toBe(true);
+  });
+
+  it("serializes simultaneous assignments and persists the round's no-repeat history", async () => {
+    expect((await hostStart("admin", 150)).ok).toBe(true);
+    await Promise.all(ids.slice(0, 2).map(id => runAction(game, (s, c) => reroll(s, c, id))));
+    const saved = await getState(game);
+    expect(saved.game.settings.missionMode).toBe("unique");
+    const issued = saved.players.flatMap(p => p.missionsSeen);
+    expect(issued).toHaveLength(6);
+    expect(new Set(issued).size).toBe(6);
+    expect(new Set(saved.game.settings.usedMissionIds)).toEqual(new Set(issued));
+    await runAction(game, endGame);
+    await runAction(game, resetGame);
+    const reset = await getState(game);
+    expect(reset.game.settings.usedMissionIds).toEqual([]);
+    expect(reset.game.settings.usedMissionTexts).toEqual([]);
+    expect(reset.game.settings.playerMissionTexts).toEqual({});
+    expect(reset.players.every(p => p.missionsSeen.length === 0)).toBe(true);
+  });
+
+  it("preserves a removed legacy player's used tasks when the host deletes their row", async () => {
+    await runAction(game, startGame);
+    const before = await getState(game);
+    const spent = before.players.find(p => p.id === ids[0])!.missionsSeen;
+    await runAction(game, (s, c) => removePlayer(s, c, ids[0], "left"));
+    // Simulate a running game that predates the new game-level ledger.
+    await holder.sql`update games set settings = settings - 'usedMissionIds' - 'usedMissionTexts' - 'playerMissionTexts' where id=${game}`;
+    expect((await hostDeletePlayer("admin", ids[0])).ok).toBe(true);
+    const saved = await getState(game);
+    expect(saved.players.some(p => p.id === ids[0])).toBe(false);
+    expect(saved.game.settings.usedMissionIds).toEqual(expect.arrayContaining(spent));
+    expect(saved.game.settings.usedMissionTexts).toEqual(expect.arrayContaining(
+      before.missions.filter(m => spent.includes(m.id)).map(m => m.text.toLowerCase())));
+  });
+
+  it("protects issued task text in every running game, including while paused", async () => {
+    await runAction(game, startGame);
+    const state = await getState(game);
+    const mission = state.missions.find(m => m.id === state.players[0].missionId)!;
+    const other = state.missions.find(m => m.id === state.players[1].missionId)!;
+    // A different host can edit the shared catalog, but cannot change an
+    // issued task into a normalized duplicate of somebody else's task.
+    const rejected = await hostEditMission("other", mission.id, other.text.toUpperCase(), "M");
+    expect(rejected.ok).toBe(false);
+    expect(rejected).toMatchObject({ error: expect.stringContaining("Add a new task") });
+    expect(await missionText(mission.id)).toBe(mission.text);
+    // Cosmetic corrections do not change which task the player receives.
+    expect((await hostEditMission("other", mission.id, mission.text.toUpperCase().replace(" ", "   "), "M")).ok).toBe(true);
+    expect(await missionText(mission.id)).toBe(mission.text.toUpperCase().replace(" ", "   "));
+    await runAction(game, pauseGame);
+    expect((await hostEditMission("admin", mission.id, "A changed task while paused", "E")).ok).toBe(false);
+  });
+
+  it("protects legacy and permanently deleted players' issued tasks from edits", async () => {
+    await runAction(game, startGame);
+    const state = await getState(game);
+    const mission = state.missions.find(m => m.id === state.players.find(p => p.id === ids[0])!.missionId)!;
+    // Current task IDs protect a pre-ledger round even without missions_seen.
+    await holder.sql`update games set settings = settings - 'usedMissionIds' - 'usedMissionTexts' - 'playerMissionTexts' where id=${game}`;
+    await holder.sql`update players set missions_seen = '{}'::uuid[] where id=${ids[0]}`;
+    expect((await hostEditMission("admin", mission.id, "Changed current legacy task", "E")).ok).toBe(false);
+    await runAction(game, (s, c) => removePlayer(s, c, ids[0], "left"));
+    // After leaving, only the legacy player's missions_seen carries the ID.
+    await holder.sql`update games set settings = settings - 'usedMissionIds' - 'usedMissionTexts' - 'playerMissionTexts' where id=${game}`;
+    expect((await hostEditMission("admin", mission.id, "Changed retired legacy task", "E")).ok).toBe(false);
+    expect((await hostDeletePlayer("admin", ids[0])).ok).toBe(true);
+    expect((await hostEditMission("admin", mission.id, "Changed deleted player's task", "E")).ok).toBe(false);
+    expect(await missionText(mission.id)).toBe(mission.text);
+  });
+
+  it("allows unissued task edits and issued task edits once the round ends", async () => {
+    await runAction(game, startGame);
+    const state = await getState(game);
+    const unissued = state.missions.find(m => !state.game.settings.usedMissionIds.includes(m.id))!;
+    expect((await hostEditMission("admin", unissued.id, "A new unused task", "E")).ok).toBe(true);
+    expect(await missionText(unissued.id)).toBe("A new unused task");
+    const issued = state.players[0].missionId!;
+    await runAction(game, endGame);
+    expect((await hostEditMission("admin", issued, "Updated after the round", "E")).ok).toBe(true);
+    expect(await missionText(issued)).toBe("Updated after the round");
+  });
+
+  it("waits for in-flight allocations before checking whether task text can change", async () => {
+    await runAction(game, startGame);
+    const state = await getState(game);
+    const mission = state.missions.find(m => !state.game.settings.usedMissionIds.includes(m.id))!;
+    const observer = postgres(url!, { max: 1, prepare: false });
+    let edit: ReturnType<typeof hostEditMission> | undefined;
+    try {
+      await holder.sql.begin(async (tx) => {
+        await tx`lock table missions in share mode`;
+        await tx`update games set settings = settings || ${tx.json({ usedMissionIds: [...state.game.settings.usedMissionIds, mission.id] })} where id=${game}`;
+        edit = hostEditMission("admin", mission.id, "An edit racing allocation", "E");
+        // Observe the editor waiting on the catalog lock, without timing the
+        // test around an assumed query speed or committing history early.
+        let waiting = false;
+        const deadline = Date.now() + 3000;
+        while (!waiting && Date.now() < deadline) {
+          const [lock] = await observer`select exists (
+            select 1 from pg_locks where relation = 'missions'::regclass
+            and mode = 'RowExclusiveLock' and not granted
+          ) as waiting`;
+          waiting = lock.waiting as boolean;
+          if (!waiting) await new Promise(resolve => setTimeout(resolve, 10));
+        }
+        expect(waiting).toBe(true);
+      });
+      expect((await edit!).ok).toBe(false);
+      expect(await missionText(mission.id)).toBe(mission.text);
+    } finally {
+      if (edit) await edit;
+      await observer.end();
+    }
   });
 
   it("runs the old schema with notifications disabled", async () => {

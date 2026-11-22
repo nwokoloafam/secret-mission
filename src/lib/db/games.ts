@@ -78,6 +78,10 @@ async function loadState(tx: Tx | postgres.Sql, gameId: string, lock: boolean): 
     ? await tx`select * from games where id = ${gameId} for update`
     : await tx`select * from games where id = ${gameId}`;
   if (games.length === 0) throw new Error("Game not found");
+  // Keep the catalog fixed through allocation and saving its issued history.
+  // Catalog edits take ROW EXCLUSIVE first and never lock game rows, so an
+  // editor cannot slip between allocation and its ledger becoming visible.
+  if (lock) await tx`lock table missions in share mode`;
   const players = await tx`select * from players where game_id = ${gameId} order by created_at`;
   const missions = await tx`select id, text, difficulty, active from missions`;
   return { game: rowToGame(games[0]), players: players.map(rowToPlayer), missions: missions.map(rowToMission) };
