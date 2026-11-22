@@ -1,6 +1,6 @@
 # Missions (draft list)
 
-Guests-only, low-noise, built to make people mix. No bar staff or strangers, no drinking required.
+Built to make people mix. Keep tasks within the party, except the specific friendly-conversation task with another bar patron. Never involve bar staff; move on if someone is not interested. No drinking required.
 The killer completes the mission, then tells the target "got you" and asks for their code.
 
 Written theme-neutral; theme flavor gets added later in the copy.
@@ -60,7 +60,49 @@ Written theme-neutral; theme flavor gets added later in the copy.
 41. (H) Get them to give a 10-second birthday speech for Afam.
 42. (H) Get them to admit something Afam has done that annoyed them.
 
+## Try something playful
+43. (M) Get them to let you try on an accessory or item of their clothing, such as a hat, glasses, scarf, or jacket.
+44. (H) Get them to play one round of the penis game with you: take turns saying "penis" louder until one of you gives up.
+45. (E) Get them to compare hand sizes with you.
+46. (M) Get them to pinky-promise you something.
+47. (M) Get them to say "that's what she said."
+
+## Around the bar
+48. (E) Get them to clink glasses with you and say "cheers."
+49. (M) Get them to let you choose their next drink.
+50. (M) Get them to do a shot with you (water counts).
+51. (M) Get them to make a toast.
+52. (M) Get them to guess your drink.
+53. (M) Get them to identify the song currently playing.
+54. (M) Get them to explain how to make their favorite cocktail.
+55. (E) Get them to compliment your outfit.
+56. (E) Get them to guess your age.
+57. (E) Get them to tell you their go-to drunk food.
+58. (M) Get them to tell you their worst hangover story.
+59. (H) Get them to start a friendly conversation with another bar patron who isn't part of the party (not bar staff).
+60. (E) Get them to say "where's my drink?"
+61. (M) Get them to say "I'm not even drunk."
+62. (E) Get them to play one round of rock-paper-scissors with you.
+63. (M) Get them to guess how long you've known Afam.
+64. (M) Get them to use the word "moist" in a sentence.
+65. (M) Get them to tell you about a time they called someone by the wrong name.
+
+## Simple mischief
+66. (M) Get them to make up a handshake with you.
+67. (M) Get them to say "pickle."
+68. (M) Get them to say "squirrel."
+69. (M) Get them to say "flamingo."
+70. (M) Get them to say "nipple."
+71. (M) Get them to say "belly button."
+72. (E) Get them to do finger guns at you.
+73. (M) Get them to use air quotes.
+74. (E) Get them to wink at you.
+75. (E) Get them to make a heart with their hands.
+76. (E) Get them to play a thumb war with you.
+77. (M) Get them to give you a nickname.
+
 ## Notes
+- For #59, a brief, welcome conversation counts; respect anyone who is not interested. The house rules explicitly allow this task.
 - Some H missions (singing, dancing, speeches) are louder than "low-noise"; keep them for late game or cut them.
 - #8, #10, #38 lean into the Nigerian theme; they work with any theme too.
-- Target: 30–50 total. Add, cut, or reword freely.
+- The live catalog also contains host-created tasks and disabled tasks; publish approved additions with migration 0006 instead of reapplying the full seed to production.

@@ -26,7 +26,7 @@ function Step({ n, title, caption, children }: { n: number; title: string; capti
 
 const RULES: [string, string][] = [
   ["🤝", "Caught? Hand over your code. No arguing."],
-  ["🙅", "Guests only. No bar staff or strangers."],
+  ["🙅", "Guests only, except the task to chat with another bar patron. Never involve staff. If they're not interested, move on."],
   ["⚡", "1 bonus action per game: guess your hunter or swap your task."],
   ["⏸️", "Embassy closed = game paused. No catching."],
   ["⚖️", "Afam settles every dispute."],
