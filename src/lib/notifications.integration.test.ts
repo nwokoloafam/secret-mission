@@ -173,6 +173,18 @@ suite("notifications database integration", () => {
     expect(reset.players.every(p => p.missionsSeen.length === 0)).toBe(true);
   });
 
+  it("persists an acknowledged no-repeat start without the full swap buffer", async () => {
+    await holder.sql`delete from missions where text not in ('task 1','task 2','task 3','task 4','task 5','task 6')`;
+    const cap = missionCapacity(await getState(game));
+    expect(cap).toMatchObject({baseTotalRequired: 6, totalRequired: 8, requiresDuplicates: false, bufferShort: true});
+    expect((await hostStart("admin",150)).ok).toBe(false);
+    expect((await hostStart("admin",150,{mode:"duplicate",signature:cap.acknowledgment})).ok).toBe(false);
+    expect((await hostStart("admin",150,{mode:"unique",signature:"stale"})).ok).toBe(false);
+    expect((await getState(game)).game.status).toBe("setup");
+    expect((await hostStart("admin",150,{mode:"unique",signature:cap.acknowledgment})).ok).toBe(true);
+    expect((await getState(game)).game.settings.missionMode).toBe("unique");
+  });
+
   it("preserves a removed legacy player's used tasks when the host deletes their row", async () => {
     await runAction(game, startGame);
     const before = await getState(game);

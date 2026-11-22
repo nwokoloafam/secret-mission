@@ -11,6 +11,7 @@ import { ActionResult, Ctx, DEFAULT_SETTINGS, GameError, GameState, type Setting
 import { normalizeMissionText } from "@/lib/game/mission-pool";
 import { db } from "@/lib/db/client";
 import { runAction, runTick } from "@/lib/db/games";
+import { COPY } from "@/lib/copy";
 import { currentGame, gameByAdminToken, newToken, playerByToken } from "@/lib/db/queries";
 import { uploadPhoto } from "@/lib/photos";
 import { insertNotifications, notificationsEnabled } from "@/lib/notifications";
@@ -129,7 +130,7 @@ export async function submitKillAction(token: string, code: string): Promise<Res
   return wrap(async () => {
     const r = await play(token, (s, c, id) => E.submitKill(s, c, id, code));
     const kill = r.events.find((e) => e.type === "kill");
-    const drink = r.state.game.settings.barTabOpen ? " 🍺 Your drink's on Afam's tab." : "";
+    const drink = r.state.game.settings.barTabOpen ? ` 🎟️ Find ${COPY.ticketHost} for your drink ticket.` : "";
     return { ok: true, message: `Got them.${drink}`, data: { victimId: kill?.subjectId ?? null } };
   });
 }
@@ -149,7 +150,7 @@ export async function accuseAction(token: string, suspectId: string): Promise<Re
     return right
       ? {
           ok: true,
-          message: `You caught your hunter! They're out, and it counts as your catch.${r.state.game.settings.barTabOpen ? " 🍺 Drink's on Afam's tab." : ""}`,
+          message: `You caught your hunter! They're out, and it counts as your catch.${r.state.game.settings.barTabOpen ? ` 🎟️ Find ${COPY.ticketHost} for your drink ticket.` : ""}`,
         }
       : { ok: true, message: "Wrong guess. Nothing happens, but your bonus action is used up." };
   });
@@ -217,11 +218,17 @@ export async function tickAction(gameId: string): Promise<void> {
 // Host (Afam) actions
 // ─────────────────────────────────────────────
 
-export async function hostStart(admin: string, durationMinutes: number, duplicateAcknowledgment?: string): Promise<Result> {
+export async function hostStart(admin: string, durationMinutes: number, capacityAcknowledgment?: string | { mode: "unique" | "duplicate"; signature: string }): Promise<Result> {
   return wrap(async () => {
     const mins = Math.max(15, Math.min(600, Math.round(durationMinutes) || 150));
-    await host(admin, (s, c) => E.startGame(s, c, { durationMinutes: mins,
-      duplicateAcknowledgment: typeof duplicateAcknowledgment === "string" ? duplicateAcknowledgment : undefined }));
+    const acknowledgment = typeof capacityAcknowledgment === "string"
+      ? { mode: "duplicate" as const, signature: capacityAcknowledgment }
+      : capacityAcknowledgment &&
+      (capacityAcknowledgment.mode === "unique" || capacityAcknowledgment.mode === "duplicate") &&
+      typeof capacityAcknowledgment.signature === "string"
+      ? { mode: capacityAcknowledgment.mode, signature: capacityAcknowledgment.signature }
+      : undefined;
+    await host(admin, (s, c) => E.startGame(s, c, { durationMinutes: mins, capacityAcknowledgment: acknowledgment }));
     return { ok: true, message: "Game started." };
   });
 }
@@ -378,6 +385,17 @@ export async function hostSetBarTab(admin: string, open: boolean): Promise<Resul
     await db()`update games set settings = settings || ${db().json({ barTabOpen: open })} where id = ${g.id}`;
     await logEvent(g.id, "bar_tab", null, null, { open });
     return { ok: true, message: open ? "Bar tab reopened." : "Bar tab closed. Everyone's been told." };
+  });
+}
+
+export async function hostSetTicketHostPhoto(admin: string, form: FormData): Promise<Result> {
+  return wrap(async () => {
+    const g = await asHost(admin);
+    const photo = form.get("photo");
+    if (!(photo instanceof File) || photo.size === 0) return fail("Choose a photo first.");
+    const url = await uploadPhoto(photo);
+    await db()`update games set settings = settings || ${db().json({ ticketHostPhotoUrl: url })} where id = ${g.id}`;
+    return { ok: true, message: `${COPY.ticketHost}'s photo saved. Players can see it now.` };
   });
 }
 

@@ -49,7 +49,7 @@ export interface PlayerViewData {
     status: string;
     targetEndAt: string | null;
     winnerName: string | null;
-    settings: { bonusAt: number; barTabOpen: boolean; joinCutoff: number };
+    settings: { bonusAt: number; barTabOpen: boolean; ticketHostPhotoUrl: string | null; joinCutoff: number };
   };
   target: (Person & { how: string | null }) | null;
   mission: string | null;
@@ -93,7 +93,16 @@ export function PlayerView({ data }: { data: PlayerViewData }) {
       {paused && <p className="banner warn">{COPY.paused}</p>}
       {data.broadcast && <p className="banner">📣 {data.broadcast}</p>}
       {running && !game.settings.barTabOpen && (
-        <p className="banner">🍺 The bar tab is finished! Catches still count, drinks are on you now.</p>
+        <p className="banner">🍺 The bar tab is finished! Catches still count, but there are no more drink tickets.</p>
+      )}
+      {game.status !== "ended" && game.settings.barTabOpen && (
+        <div className="card row" style={{ gap: 12, alignItems: "center" }}>
+          <Avatar url={game.settings.ticketHostPhotoUrl} name={COPY.ticketHost} size={52} />
+          <p className="small">
+            🎟️ Every catch earns a drink ticket for {COPY.drinks}. <strong>{COPY.ticketHost}</strong> hands them out (Afam&apos;s playing
+            too).
+          </p>
+        </div>
       )}
 
       {running && (

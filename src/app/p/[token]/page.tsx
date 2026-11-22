@@ -57,6 +57,7 @@ export default async function PlayerPage({ params }: PageProps<"/p/[token]">) {
       settings: {
         bonusAt: game.settings.bonusAccusationAtKills,
         barTabOpen: game.settings.barTabOpen,
+        ticketHostPhotoUrl: game.settings.ticketHostPhotoUrl,
         joinCutoff: game.settings.joinCutoffPlayers,
       },
     },

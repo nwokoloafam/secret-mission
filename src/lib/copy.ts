@@ -16,6 +16,9 @@ export const COPY = {
   paused: "Embassy closed — game paused",
   remaining: (n: number) => `${n} ${n === 1 ? "applicant" : "applicants"} remain`,
   endReveal: "Final decisions",
+  /** Hands out drink tickets (Afam is playing, so he can't). */
+  ticketHost: "Rads",
+  drinks: "a beer, wine, or well drink",
 };
 
 export const TOP_COLORS = ["Black", "White", "Grey", "Blue", "Red", "Green", "Yellow", "Pink", "Purple", "Brown", "Patterned"];

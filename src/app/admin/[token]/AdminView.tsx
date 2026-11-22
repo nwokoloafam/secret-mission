@@ -19,6 +19,7 @@ import {
   hostSendHint,
   hostSetCustomHint,
   hostSetBarTab,
+  hostSetTicketHostPhoto,
   hostSetWinner,
   hostShiftEnd,
   hostSkip,
@@ -27,7 +28,7 @@ import {
   hostToggleMission,
 } from "@/app/actions";
 import { COPY } from "@/lib/copy";
-import { AutoRefresh, Avatar, Btn, Countdown, Flash, useAction } from "@/components/ui";
+import { AutoRefresh, Avatar, Btn, Countdown, Flash, PhotoPicker, useAction } from "@/components/ui";
 import type { MissionCapacity } from "@/lib/game/mission-pool";
 
 type AdminPlayer = {
@@ -46,7 +47,7 @@ type AdminPlayer = {
 
 export interface AdminData {
   token: string;
-  game: { id: string; name: string; status: string; targetEndAt: string | null; winnerId: string | null; defaultDuration: number; barTabOpen: boolean; missionMode: "unique" | "duplicate" };
+  game: { id: string; name: string; status: string; targetEndAt: string | null; winnerId: string | null; defaultDuration: number; barTabOpen: boolean; missionMode: "unique" | "duplicate"; ticketHostPhotoUrl: string | null };
   missionCapacity: MissionCapacity;
   players: AdminPlayer[];
   disputes: { id: string; text: string }[];
@@ -73,7 +74,7 @@ export function AdminView({ data }: { data: AdminData }) {
 
       <Controls data={data} />
       {(data.disputes.length > 0 || data.alerts.length > 0) && <Alerts data={data} />}
-      {g.status !== "ended" && <BarTab token={t} open={g.barTabOpen} />}
+      {g.status !== "ended" && <BarTab token={t} open={g.barTabOpen} photoUrl={g.ticketHostPhotoUrl} />}
       <Broadcast token={t} />
       <Players data={data} />
       <WalkIn token={t} />
@@ -197,32 +198,34 @@ function StartControls({ data }: { data: AdminData }) {
   const a = useAction();
   const enoughPlayers = capacity.playerCount >= 3;
   const acknowledged = consent.signature === capacity.acknowledgment && consent.checked;
+  const acknowledgmentMode = capacity.requiresDuplicates ? "duplicate" : "unique";
   const canAssign = capacity.totalAvailable > 0 && (capacity.earlyRequired === 0 || capacity.earlyAvailable > 0);
 
   return (
     <div className="stack">
-      {enoughPlayers && capacity.requiresDuplicates ? (
+      {enoughPlayers && (capacity.requiresDuplicates || capacity.bufferShort) ? (
         <div className="stack" role="alert" style={{ borderLeft: "3px solid var(--danger)", paddingLeft: 12 }}>
-          <h3>Not enough tasks for a no-repeat round</h3>
+          <h3>{capacity.requiresDuplicates ? "Not enough tasks for a no-repeat round" : "Swap buffer is short"}</h3>
           <p className="small">
-            {capacity.playerCount} players need {capacity.totalRequired} different tasks to cover starting tasks,
-            one swap each, and catches down to the final player. You have {capacity.totalAvailable} active tasks.
+            For {capacity.playerCount} players, the full estimate is {capacity.totalRequired} distinct tasks,
+            including a buffer for {capacity.swapBuffer} swaps (about half the players). You have {capacity.totalAvailable} active tasks.
           </p>
           {capacity.earlyRequired > 0 && (
             <p className="small">
-              Before hard tasks unlock, you need {capacity.earlyRequired} easy/medium tasks; you have {capacity.earlyAvailable}.
+              {capacity.requiresDuplicates ? "For a no-repeat start, " : "For the baseline no-repeat round, "}you need {capacity.baseEarlyRequired} Easy/Medium tasks; you have {capacity.earlyAvailable}. The full swap-buffer estimate is {capacity.earlyRequired}.
+              {" "}The late game needs {capacity.hardRequired} more tasks of any difficulty; you have {capacity.hardAvailable} Hard tasks available. The swap buffer is an estimate, not a limit.
             </p>
           )}
-          <p className="small">Add or activate more tasks below, or acknowledge duplicate mode to start. Tasks may repeat between players, but never for the same player in this round.</p>
+          <p className="small">{capacity.requiresDuplicates ? "Add or activate more tasks, or acknowledge duplicate mode to start. Tasks may repeat between players, but never for the same player this round." : "You have enough tasks for a no-repeat round without the swap buffer. If swaps use up the pool, add and activate more tasks during play; no task will silently repeat."}</p>
           <label style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
             <input type="checkbox" checked={acknowledged}
               onChange={(e) => setConsent({ signature: capacity.acknowledgment, checked: e.target.checked })}
               style={{ width: 20, minHeight: 20, flex: "none", marginTop: 2 }} />
-            <span>I understand and want to start in duplicate mode.</span>
+            <span>{capacity.requiresDuplicates ? "I understand and want to start in duplicate mode." : "I understand swaps may need more tasks, and want to start in no-repeat mode."}</span>
           </label>
         </div>
       ) : enoughPlayers ? (
-        <p className="small"><strong>No-repeat mode.</strong> {capacity.totalAvailable} active tasks cover the {capacity.totalRequired}-task round budget.</p>
+        <p className="small"><strong>No-repeat mode.</strong> {capacity.totalAvailable} active tasks cover the {capacity.totalRequired}-task estimate, including a buffer for {capacity.swapBuffer} swaps. {capacity.earlyRequired > 0 ? `${capacity.earlyRequired} Easy/Medium tasks cover the early phase and swaps; ${capacity.hardRequired} additional tasks of any difficulty cover the late phase.` : "Any difficulty can be used from the start."}</p>
       ) : null}
       {enoughPlayers && !canAssign && <p className="flash error">Add or activate an eligible task before starting.</p>}
       {enoughPlayers && <p className="muted small">Late arrivals, host skips and moves can use extra tasks. If no eligible fresh task remains, the host must add or activate more; tasks will not silently repeat.</p>}
@@ -231,9 +234,9 @@ function StartControls({ data }: { data: AdminData }) {
           Length (minutes)
           <input inputMode="numeric" value={mins} onChange={(e) => setMins(e.target.value.replace(/\D/g, ""))} />
         </label>
-        <Btn pending={a.pending} disabled={!enoughPlayers || !canAssign || (capacity.requiresDuplicates && !acknowledged)}
-          onClick={() => a.run(() => hostStart(data.token, Number(mins), acknowledged ? capacity.acknowledgment : undefined))}>
-          {capacity.requiresDuplicates ? `Start in duplicate mode (${capacity.playerCount} players)` : `Start game (${capacity.playerCount} players)`}
+        <Btn pending={a.pending} disabled={!enoughPlayers || !canAssign || ((capacity.requiresDuplicates || capacity.bufferShort) && !acknowledged)}
+          onClick={() => a.run(() => hostStart(data.token, Number(mins), acknowledged ? { mode: acknowledgmentMode, signature: capacity.acknowledgment } : undefined))}>
+          {capacity.requiresDuplicates ? `Start in duplicate mode (${capacity.playerCount} players)` : capacity.bufferShort ? `Start no-repeat without buffer (${capacity.playerCount} players)` : `Start game (${capacity.playerCount} players)`}
         </Btn>
       </div>
       <Flash result={a.result} />
@@ -269,16 +272,19 @@ function Alerts({ data }: { data: AdminData }) {
   );
 }
 
-function BarTab({ token, open }: { token: string; open: boolean }) {
+function BarTab({ token, open, photoUrl }: { token: string; open: boolean; photoUrl: string | null }) {
   const [confirm, setConfirm] = useState(false);
   const a = useAction();
+  const photo = useAction();
   return (
     <section className="card">
       <div className="row spread wrap">
         <div>
           <h3>🍺 Bar tab: {open ? "open" : "closed"}</h3>
           <p className="muted small">
-            {open ? "Each catch earns a beer, shot, or mocktail (honor system)." : "Players see that catches no longer earn drinks."}
+            {open
+              ? `Each catch earns a drink ticket for ${COPY.drinks}, handed out by ${COPY.ticketHost}.`
+              : "Players see that catches no longer earn drink tickets."}
           </p>
         </div>
         {open ? (
@@ -296,6 +302,23 @@ function BarTab({ token, open }: { token: string; open: boolean }) {
         )}
       </div>
       <Flash result={a.result} />
+      <div className="row wrap" style={{ gap: 12, alignItems: "center" }}>
+        <Avatar url={photoUrl} name={COPY.ticketHost} size={52} />
+        <div className="stack" style={{ gap: 6 }}>
+          <p className="small">
+            {photoUrl ? `${COPY.ticketHost}'s photo (players see this)` : `Add ${COPY.ticketHost}'s photo so players know who gives out tickets`}
+          </p>
+          <PhotoPicker
+            onPick={(f) => {
+              const fd = new FormData();
+              fd.set("photo", f);
+              photo.run(() => hostSetTicketHostPhoto(token, fd));
+            }}
+          />
+          {photo.pending && <p className="muted small">Uploading…</p>}
+          <Flash result={photo.result} />
+        </div>
+      </div>
     </section>
   );
 }
