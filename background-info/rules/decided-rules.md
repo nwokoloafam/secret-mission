@@ -40,6 +40,7 @@ Locked-in changes on top of `../plan-overview.md`. This is the source of truth f
 - No task ever requires drinking.
 
 ## Missions
+- **Guests only, with one exception:** the task to start a friendly conversation with another bar patron. A brief, welcome conversation counts; move on if they aren't interested. Never involve bar staff.
 - **Task swaps are a bonus action** (see below). Self-serve, no need to ask Afam.
 - **Afam's skip is the backstop:** if a player has used their bonus action and is still stuck (target left, mission doesn't fit), Afam can skip the mission from admin.
 

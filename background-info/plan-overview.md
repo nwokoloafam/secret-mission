@@ -6,7 +6,7 @@ Summary of the original plan doc ("Secret Mission Game — 30th Birthday Plan", 
 ## The game
 - Assassin-style game at a bar, 20–30 guests, run from a mobile website.
 - Each player has a secret target and a mild social mission. Completing it eliminates the target and passes their target to you.
-- Missions are guests-only, low-noise, built to make people mix (get them to say a word, learn their middle name, photo of them holding a spoon). No bar staff or strangers.
+- Missions are low-noise and built to make people mix (get them to say a word, learn their middle name, photo of them holding a spoon). Keep them within the party, except the specific task to start a friendly conversation with another bar patron. A brief, welcome conversation counts; move on if they aren't interested. Never involve bar staff.
 - **It's a background game.** It should never pull people away from the party. No crowd voting or spectacle.
 
 ## Core mechanics
