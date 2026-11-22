@@ -19,6 +19,7 @@ import {
   hostSendHint,
   hostSetCustomHint,
   hostSetBarTab,
+  hostSetTicketHostPhoto,
   hostSetWinner,
   hostShiftEnd,
   hostSkip,
@@ -27,7 +28,7 @@ import {
   hostToggleMission,
 } from "@/app/actions";
 import { COPY } from "@/lib/copy";
-import { AutoRefresh, Avatar, Btn, Countdown, Flash, useAction } from "@/components/ui";
+import { AutoRefresh, Avatar, Btn, Countdown, Flash, PhotoPicker, useAction } from "@/components/ui";
 import type { MissionCapacity } from "@/lib/game/mission-pool";
 
 type AdminPlayer = {
@@ -46,7 +47,7 @@ type AdminPlayer = {
 
 export interface AdminData {
   token: string;
-  game: { id: string; name: string; status: string; targetEndAt: string | null; winnerId: string | null; defaultDuration: number; barTabOpen: boolean; missionMode: "unique" | "duplicate" };
+  game: { id: string; name: string; status: string; targetEndAt: string | null; winnerId: string | null; defaultDuration: number; barTabOpen: boolean; missionMode: "unique" | "duplicate"; ticketHostPhotoUrl: string | null };
   missionCapacity: MissionCapacity;
   players: AdminPlayer[];
   disputes: { id: string; text: string }[];
@@ -73,7 +74,7 @@ export function AdminView({ data }: { data: AdminData }) {
 
       <Controls data={data} />
       {(data.disputes.length > 0 || data.alerts.length > 0) && <Alerts data={data} />}
-      {g.status !== "ended" && <BarTab token={t} open={g.barTabOpen} />}
+      {g.status !== "ended" && <BarTab token={t} open={g.barTabOpen} photoUrl={g.ticketHostPhotoUrl} />}
       <Broadcast token={t} />
       <Players data={data} />
       <WalkIn token={t} />
@@ -269,16 +270,19 @@ function Alerts({ data }: { data: AdminData }) {
   );
 }
 
-function BarTab({ token, open }: { token: string; open: boolean }) {
+function BarTab({ token, open, photoUrl }: { token: string; open: boolean; photoUrl: string | null }) {
   const [confirm, setConfirm] = useState(false);
   const a = useAction();
+  const photo = useAction();
   return (
     <section className="card">
       <div className="row spread wrap">
         <div>
           <h3>🍺 Bar tab: {open ? "open" : "closed"}</h3>
           <p className="muted small">
-            {open ? "Each catch earns a beer, shot, or mocktail (honor system)." : "Players see that catches no longer earn drinks."}
+            {open
+              ? `Each catch earns a drink ticket for ${COPY.drinks}, handed out by ${COPY.ticketHost}.`
+              : "Players see that catches no longer earn drink tickets."}
           </p>
         </div>
         {open ? (
@@ -296,6 +300,23 @@ function BarTab({ token, open }: { token: string; open: boolean }) {
         )}
       </div>
       <Flash result={a.result} />
+      <div className="row wrap" style={{ gap: 12, alignItems: "center" }}>
+        <Avatar url={photoUrl} name={COPY.ticketHost} size={52} />
+        <div className="stack" style={{ gap: 6 }}>
+          <p className="small">
+            {photoUrl ? `${COPY.ticketHost}'s photo (players see this)` : `Add ${COPY.ticketHost}'s photo so players know who gives out tickets`}
+          </p>
+          <PhotoPicker
+            onPick={(f) => {
+              const fd = new FormData();
+              fd.set("photo", f);
+              photo.run(() => hostSetTicketHostPhoto(token, fd));
+            }}
+          />
+          {photo.pending && <p className="muted small">Uploading…</p>}
+          <Flash result={photo.result} />
+        </div>
+      </div>
     </section>
   );
 }

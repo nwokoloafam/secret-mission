@@ -3,6 +3,7 @@
 
 import type { ReactNode } from "react";
 import { AccuseArt, CatchArt, CheckInArt, GhostArt, LoopArt, TargetArt, WinArt } from "./illustrations";
+import { COPY } from "@/lib/copy";
 
 function Step({ n, title, caption, children }: { n: number; title: string; caption: ReactNode; children: ReactNode }) {
   return (
@@ -29,7 +30,7 @@ const RULES: [string, string][] = [
   ["⚡", "1 bonus action per game: guess your hunter or swap your task."],
   ["⏸️", "Embassy closed = game paused. No catching."],
   ["⚖️", "Afam settles every dispute."],
-  ["🍺", "Every catch = a beer, shot, or mocktail on Afam's tab, until it's finished. Honor system!"],
+  ["🎟️", `Every catch = a drink ticket for ${COPY.drinks}. Get it from ${COPY.ticketHost}, until the tab's finished.`],
 ];
 
 export function HowToPlaySteps({ skipCheckIn = false }: { skipCheckIn?: boolean }) {

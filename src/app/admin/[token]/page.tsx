@@ -58,6 +58,7 @@ export default async function AdminPage({ params }: PageProps<"/admin/[token]">)
       defaultDuration: game.settings.defaultDurationMinutes,
       barTabOpen: game.settings.barTabOpen,
       missionMode: game.settings.missionMode,
+      ticketHostPhotoUrl: game.settings.ticketHostPhotoUrl,
     },
     missionCapacity: getMissionCapacity(players.map((p) => ({ id: p.id, status: p.status })), missions, game.settings),
     players: sorted.map((p) => ({

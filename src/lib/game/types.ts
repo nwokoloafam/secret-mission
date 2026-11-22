@@ -28,6 +28,8 @@ export interface Settings {
   silentFinal: boolean;
   /** Afam's bar tab: while open, each catch earns a drink (honor system). */
   barTabOpen: boolean;
+  /** Photo of the person handing out drink tickets, so guests can find her. */
+  ticketHostPhotoUrl: string | null;
   defaultDurationMinutes: number;
   /** Allocation policy for this round. Legacy rounds permit sharing across players. */
   missionMode: "unique" | "duplicate";
@@ -47,6 +49,7 @@ export const DEFAULT_SETTINGS: Settings = {
   hardMissionsAtAlive: 5,
   silentFinal: false,
   barTabOpen: true,
+  ticketHostPhotoUrl: null,
   defaultDurationMinutes: 150,
   missionMode: "duplicate",
   usedMissionIds: [],
