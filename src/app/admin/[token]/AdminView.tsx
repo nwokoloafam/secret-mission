@@ -28,6 +28,7 @@ import {
 } from "@/app/actions";
 import { COPY } from "@/lib/copy";
 import { AutoRefresh, Avatar, Btn, Countdown, Flash, useAction } from "@/components/ui";
+import type { MissionCapacity } from "@/lib/game/mission-pool";
 
 type AdminPlayer = {
   id: string;
@@ -45,7 +46,8 @@ type AdminPlayer = {
 
 export interface AdminData {
   token: string;
-  game: { id: string; name: string; status: string; targetEndAt: string | null; winnerId: string | null; defaultDuration: number; barTabOpen: boolean };
+  game: { id: string; name: string; status: string; targetEndAt: string | null; winnerId: string | null; defaultDuration: number; barTabOpen: boolean; missionMode: "unique" | "duplicate" };
+  missionCapacity: MissionCapacity;
   players: AdminPlayer[];
   disputes: { id: string; text: string }[];
   alerts: { id: string; text: string; at: string }[];
@@ -84,7 +86,6 @@ export function AdminView({ data }: { data: AdminData }) {
 function Controls({ data }: { data: AdminData }) {
   const g = data.game;
   const t = data.token;
-  const [mins, setMins] = useState(String(g.defaultDuration));
   const [confirmEnd, setConfirmEnd] = useState(false);
   const [confirmAgain, setConfirmAgain] = useState(false);
   const a = useAction();
@@ -111,16 +112,12 @@ function Controls({ data }: { data: AdminData }) {
           : `${c.alive} alive · ${c.queued} queued`}
       </p>
 
-      {g.status === "setup" && (
-        <div className="row wrap">
-          <label style={{ width: 140 }}>
-            Length (minutes)
-            <input inputMode="numeric" value={mins} onChange={(e) => setMins(e.target.value.replace(/\D/g, ""))} />
-          </label>
-          <Btn pending={a.pending} disabled={c.checkedIn < 3} onClick={() => a.run(() => hostStart(t, Number(mins)))}>
-            Start game ({c.checkedIn} players)
-          </Btn>
-        </div>
+      {g.status === "setup" && <StartControls data={data} />}
+      {g.status !== "setup" && (
+        <p className="small">
+          Task mode: <strong>{g.missionMode === "unique" ? "No repeats this round" : "Repeats between players"}</strong>.
+          {" "}A player never gets the same task twice in a round.
+        </p>
       )}
 
       {(g.status === "active" || g.status === "paused") && (
@@ -185,6 +182,62 @@ function Controls({ data }: { data: AdminData }) {
       )}
       <Flash result={a.result} />
     </section>
+  );
+}
+
+function StartControls({ data }: { data: AdminData }) {
+  const [mins, setMins] = useState(String(data.game.defaultDuration));
+  const capacity = data.missionCapacity;
+  const [consent, setConsent] = useState({ signature: capacity.acknowledgment, checked: false });
+  // Forget consent when the roster/pool changes, even if it later changes back.
+  // Keep the duration draft while resetting only this acknowledgment.
+  if (consent.signature !== capacity.acknowledgment) {
+    setConsent({ signature: capacity.acknowledgment, checked: false });
+  }
+  const a = useAction();
+  const enoughPlayers = capacity.playerCount >= 3;
+  const acknowledged = consent.signature === capacity.acknowledgment && consent.checked;
+  const canAssign = capacity.totalAvailable > 0 && (capacity.earlyRequired === 0 || capacity.earlyAvailable > 0);
+
+  return (
+    <div className="stack">
+      {enoughPlayers && capacity.requiresDuplicates ? (
+        <div className="stack" role="alert" style={{ borderLeft: "3px solid var(--danger)", paddingLeft: 12 }}>
+          <h3>Not enough tasks for a no-repeat round</h3>
+          <p className="small">
+            {capacity.playerCount} players need {capacity.totalRequired} different tasks to cover starting tasks,
+            one swap each, and catches down to the final player. You have {capacity.totalAvailable} active tasks.
+          </p>
+          {capacity.earlyRequired > 0 && (
+            <p className="small">
+              Before hard tasks unlock, you need {capacity.earlyRequired} easy/medium tasks; you have {capacity.earlyAvailable}.
+            </p>
+          )}
+          <p className="small">Add or activate more tasks below, or acknowledge duplicate mode to start. Tasks may repeat between players, but never for the same player in this round.</p>
+          <label style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
+            <input type="checkbox" checked={acknowledged}
+              onChange={(e) => setConsent({ signature: capacity.acknowledgment, checked: e.target.checked })}
+              style={{ width: 20, minHeight: 20, flex: "none", marginTop: 2 }} />
+            <span>I understand and want to start in duplicate mode.</span>
+          </label>
+        </div>
+      ) : enoughPlayers ? (
+        <p className="small"><strong>No-repeat mode.</strong> {capacity.totalAvailable} active tasks cover the {capacity.totalRequired}-task round budget.</p>
+      ) : null}
+      {enoughPlayers && !canAssign && <p className="flash error">Add or activate an eligible task before starting.</p>}
+      {enoughPlayers && <p className="muted small">Late arrivals, host skips and moves can use extra tasks. If no eligible fresh task remains, the host must add or activate more; tasks will not silently repeat.</p>}
+      <div className="row wrap">
+        <label style={{ width: 140 }}>
+          Length (minutes)
+          <input inputMode="numeric" value={mins} onChange={(e) => setMins(e.target.value.replace(/\D/g, ""))} />
+        </label>
+        <Btn pending={a.pending} disabled={!enoughPlayers || !canAssign || (capacity.requiresDuplicates && !acknowledged)}
+          onClick={() => a.run(() => hostStart(data.token, Number(mins), acknowledged ? capacity.acknowledgment : undefined))}>
+          {capacity.requiresDuplicates ? `Start in duplicate mode (${capacity.playerCount} players)` : `Start game (${capacity.playerCount} players)`}
+        </Btn>
+      </div>
+      <Flash result={a.result} />
+    </div>
   );
 }
 

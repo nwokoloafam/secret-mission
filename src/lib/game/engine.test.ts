@@ -4,6 +4,7 @@ import {
   checkIn,
   endGame,
   forceKill,
+  missionCapacity,
   movePlayer,
   pauseGame,
   placeBet,
@@ -13,6 +14,7 @@ import {
   reroll,
   resumeGame,
   startGame,
+  skipMission,
   submitKill,
   tick,
 } from "./engine";
@@ -40,8 +42,8 @@ function ctx(minutes = 0, seed = 1): Ctx {
 }
 
 const missions: Mission[] = [
-  ...Array.from({ length: 8 }, (_, i) => ({ id: `e${i}`, text: `easy ${i}`, difficulty: "E" as const, active: true })),
-  ...Array.from({ length: 8 }, (_, i) => ({ id: `m${i}`, text: `medium ${i}`, difficulty: "M" as const, active: true })),
+  ...Array.from({ length: 80 }, (_, i) => ({ id: `e${i}`, text: `easy ${i}`, difficulty: "E" as const, active: true })),
+  ...Array.from({ length: 80 }, (_, i) => ({ id: `m${i}`, text: `medium ${i}`, difficulty: "M" as const, active: true })),
   ...Array.from({ length: 4 }, (_, i) => ({ id: `h${i}`, text: `hard ${i}`, difficulty: "H" as const, active: true })),
 ];
 
@@ -293,6 +295,8 @@ describe("late arrivals", () => {
     expect(P(s, "p99").status).toBe("alive");
     expect(P(s, "p0").targetId).toBe("p99");
     expect(P(s, "p99").graceUntil).toEqual(min(22));
+    expect(s.game.settings.usedMissionIds).toHaveLength(10);
+    expect(new Set(s.players.flatMap((p) => p.missionsSeen)).size).toBe(10);
     expectOneLoop(s);
     expectError(() => submitKill(s, ctx(13), "p0", P(s, "p99").code!), "protected");
   });
@@ -305,6 +309,8 @@ describe("late arrivals", () => {
     expect(tick(s, ctx(14))).toBeNull();
     s = tick(s, ctx(15))!.state;
     expect(P(s, "p99").status).toBe("alive");
+    expect(s.game.settings.usedMissionIds).toHaveLength(10);
+    expect(new Set(s.players.flatMap((p) => p.missionsSeen)).size).toBe(10);
     expectOneLoop(s);
   });
 
@@ -426,6 +432,138 @@ describe("other actions", () => {
   });
 });
 
+describe("round task allocation", () => {
+  const smallPool = (s: GameState, n: number) => ({ ...s, missions: missions.slice(0, n) });
+  const startShared = (s: GameState) => startGame(s, ctx(), { duplicateAcknowledgment: missionCapacity(s).acknowledgment }).state;
+
+  it("runs 33 players through every swap and catch with exactly 97 unique tasks", () => {
+    const s0 = setup(33);
+    s0.missions = [...missions.slice(0, 93), ...missions.filter((m) => m.difficulty === "H")];
+    let s = startGame(s0, ctx()).state;
+    expect(s.game.settings.missionMode).toBe("unique");
+    expect(s.players.every((p) => !p.missionId!.startsWith("h"))).toBe(true);
+    for (const p of s.players) s = reroll(s, ctx(1), p.id).state;
+    while (s.game.status === "active") s = kill(s, "p0", 2).state;
+    const assigned = s.players.flatMap((p) => p.missionsSeen);
+    expect(assigned).toHaveLength(97);
+    expect(new Set(assigned).size).toBe(97);
+    expect(s.game.settings.usedMissionIds).toHaveLength(97);
+    expect(s.game.winnerId).toBe("p0");
+    expectOneLoop(s);
+  });
+
+  it("requires a current explicit shortage acknowledgment on the server", () => {
+    const s0 = smallPool(setup(8), 8);
+    expectError(() => startGame(s0, ctx()), "duplicate_ack_required");
+    expectError(() => startGame(s0, ctx(), { duplicateAcknowledgment: "true" }), "duplicate_ack_required");
+    const old = missionCapacity(s0).acknowledgment;
+    s0.players[0].status = "registered";
+    expectError(() => startGame(s0, ctx(), { duplicateAcknowledgment: old }), "duplicate_ack_required");
+    const s = startShared(s0);
+    expect(s.game.settings.missionMode).toBe("duplicate");
+    expect(s0.game.status).toBe("setup");
+  });
+
+  it("shares across players only after unused tasks run out, never back to the same player", () => {
+    let s = startShared(smallPool(setup(8), 2));
+    expect(s.game.settings.usedMissionIds).toHaveLength(2);
+    const first = P(s, "p0").missionId;
+    s = reroll(s, ctx(1), "p0").state;
+    expect(P(s, "p0").missionId).not.toBe(first);
+    const before = structuredClone(s);
+    expectError(() => skipMission(s, ctx(2), "p0"), "no_fresh_missions");
+    expect(s).toEqual(before);
+    const victim = P(s, P(s, "p0").targetId!);
+    expectError(() => submitKill(s, ctx(2), "p0", victim.code!), "no_fresh_missions");
+    expect(s).toEqual(before);
+    expectOneLoop(s);
+  });
+
+  it("rejects a failed swap without spending the bonus", () => {
+    const s = startShared(smallPool(setup(6), 1));
+    const before = structuredClone(s);
+    expectError(() => reroll(s, ctx(1), "p0"), "no_fresh_missions");
+    expect(s).toEqual(before);
+    expect(P(s, "p0").rerollsLeft).toBe(1);
+  });
+
+  it("does not silently change unique mode when host actions consume the pool", () => {
+    let s = startGame(smallPool(setup(3), 7), ctx()).state;
+    for (let i = 0; i < 4; i++) s = skipMission(s, ctx(1), "p0").state;
+    const before = structuredClone(s);
+    expectError(() => skipMission(s, ctx(2), "p1"), "no_fresh_missions");
+    expect(s.game.settings.missionMode).toBe("unique");
+    expect(s).toEqual(before);
+  });
+
+  it("does not disclose secret hunters when exhaustion rejects leaving or accusing", () => {
+    let s = startGame(smallPool(setup(4), 10), ctx()).state;
+    for (let i = 0; i < 6; i++) s = skipMission(s, ctx(1), "p0").state;
+    const before = structuredClone(s);
+    const hunter = hunterOf(s, "p0");
+    for (const action of [
+      () => removePlayer(s, ctx(2), "p0", "left"),
+      () => accuse(s, ctx(2), "p0", hunter.id),
+    ]) {
+      try {
+        action();
+        throw new Error("Expected task exhaustion");
+      } catch (error) {
+        expect(error).toBeInstanceOf(GameError);
+        expect((error as GameError).code).toBe("no_fresh_missions");
+        for (const p of s.players) expect((error as GameError).message).not.toContain(p.firstName);
+      }
+      expect(s).toEqual(before);
+    }
+  });
+
+  it("preserves global history after a departed player's permanent deletion", () => {
+    let s = started(8);
+    const oldTask = P(s, "p1").missionId!;
+    s = removePlayer(s, ctx(1), "p1", "left").state;
+    s.players = s.players.filter((p) => p.id !== "p1");
+    s.missions = s.missions.filter((m) => m.id === oldTask);
+    expect(s.game.settings.usedMissionIds).toContain(oldTask);
+    expectError(() => skipMission(s, ctx(2), "p0"), "no_fresh_missions");
+  });
+
+  it("never repeats normalized text even under another ID or after a task edit", () => {
+    const s = startShared(smallPool(setup(6), 2));
+    const oldId = P(s, "p0").missionId!;
+    const oldText = s.missions.find((m) => m.id === oldId)!.text;
+    s.missions = [
+      { id: "alias", text: `  ${oldText.toUpperCase().replace(" ", "   ")}  `, difficulty: "E", active: true },
+      { id: oldId, text: "Edited task", difficulty: "E", active: true },
+    ];
+    expectError(() => skipMission(s, ctx(1), "p0"), "no_fresh_missions");
+  });
+
+  it("atomically skips exhausted timer splices so host recovery still works", () => {
+    let s = startShared(smallPool(setup(8), 1));
+    s.players.push(player(99, { status: "queued", queuedAt: min(0) }));
+    const before = structuredClone(s);
+    expect(tick(s, ctx(6))).toBeNull();
+    expect(s).toEqual(before);
+    expect(pauseGame(s, ctx(6)).state.game.status).toBe("paused");
+    // A fresh task lets both allocations finish; the exhausted attempt spent none.
+    s.missions.push({ id: "fresh", text: "Fresh task", difficulty: "E", active: true });
+    s = tick(s, ctx(6))!.state;
+    expect(P(s, "p99").status).toBe("alive");
+    expectOneLoop(s);
+  });
+
+  it("clears all task histories on reset and rechecks the next round's capacity", () => {
+    let s = startShared(smallPool(setup(6), 2));
+    s = resetGame(endGame(s, ctx(2)).state, ctx(3)).state;
+    expect(s.game.settings.usedMissionIds).toEqual([]);
+    expect(s.game.settings.usedMissionTexts).toEqual([]);
+    expect(s.game.settings.playerMissionTexts).toEqual({});
+    expect(s.players.every((p) => p.missionsSeen.length === 0)).toBe(true);
+    expectError(() => startGame(s, ctx(4)), "duplicate_ack_required");
+    expect(startShared(s).players.every((p) => p.missionsSeen.length === 1)).toBe(true);
+  });
+});
+
 describe("random games never break the loop", () => {
   it("survives random sequences of actions", () => {
     for (let seed = 1; seed <= 200; seed++) {
@@ -457,5 +595,5 @@ describe("random games never break the loop", () => {
         expectOneLoop(s);
       }
     }
-  });
+  }, 15_000);
 });

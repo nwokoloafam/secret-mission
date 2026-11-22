@@ -3,6 +3,7 @@ import { connection } from "next/server";
 import { describeEvent } from "@/lib/describe";
 import { allMissions, eventsOf, gameByAdminToken, openDisputes, playersOf, serverNow } from "@/lib/db/queries";
 import { AdminView, type AdminData } from "./AdminView";
+import { getMissionCapacity } from "@/lib/game/mission-pool";
 
 export default async function AdminPage({ params }: PageProps<"/admin/[token]">) {
   await connection();
@@ -56,7 +57,9 @@ export default async function AdminPage({ params }: PageProps<"/admin/[token]">)
       winnerId: game.winnerId,
       defaultDuration: game.settings.defaultDurationMinutes,
       barTabOpen: game.settings.barTabOpen,
+      missionMode: game.settings.missionMode,
     },
+    missionCapacity: getMissionCapacity(players.map((p) => ({ id: p.id, status: p.status })), missions, game.settings),
     players: sorted.map((p) => ({
       id: p.id,
       token: p.token,

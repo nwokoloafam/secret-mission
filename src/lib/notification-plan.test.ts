@@ -22,7 +22,7 @@ function ctx(minutes = 0, seed = 1): Ctx {
 }
 
 const missions: Mission[] = [
-  ...Array.from({ length: 8 }, (_, i) => ({ id: `e${i}`, text: `easy ${i}`, difficulty: "E" as const, active: true })),
+  ...Array.from({ length: 20 }, (_, i) => ({ id: `e${i}`, text: `easy ${i}`, difficulty: "E" as const, active: true })),
   ...Array.from({ length: 8 }, (_, i) => ({ id: `m${i}`, text: `medium ${i}`, difficulty: "M" as const, active: true })),
   ...Array.from({ length: 4 }, (_, i) => ({ id: `h${i}`, text: `hard ${i}`, difficulty: "H" as const, active: true })),
 ];

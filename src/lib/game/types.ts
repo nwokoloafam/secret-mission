@@ -29,6 +29,13 @@ export interface Settings {
   /** Afam's bar tab: while open, each catch earns a drink (honor system). */
   barTabOpen: boolean;
   defaultDurationMinutes: number;
+  /** Allocation policy for this round. Legacy rounds permit sharing across players. */
+  missionMode: "unique" | "duplicate";
+  /** Round history survives removal or permanent deletion of a player. */
+  usedMissionIds: string[];
+  usedMissionTexts: string[];
+  /** Normalized text snapshots protect against edits and duplicate task rows. */
+  playerMissionTexts: Record<string, string[]>;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -41,6 +48,10 @@ export const DEFAULT_SETTINGS: Settings = {
   silentFinal: false,
   barTabOpen: true,
   defaultDurationMinutes: 150,
+  missionMode: "duplicate",
+  usedMissionIds: [],
+  usedMissionTexts: [],
+  playerMissionTexts: {},
 };
 
 export interface Game {

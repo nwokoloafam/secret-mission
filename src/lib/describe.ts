@@ -12,7 +12,7 @@ export function describeEvent(e: FeedEvent, name: (id: string | null) => string)
   const s = name(e.subject_id);
   switch (e.type) {
     case "start":
-      return `Game started with ${e.data.players} players.`;
+      return `Game started with ${e.data.players} players.${e.data.missionMode === "unique" ? " Tasks will not repeat this round." : e.data.missionMode === "duplicate" ? " Repeats between players were acknowledged." : ""}`;
     case "check_in":
       return e.data.late ? `${a} arrived late${e.data.queued ? " (queued)" : " (spectating)"}.` : `${a} checked in.`;
     case "kill":
