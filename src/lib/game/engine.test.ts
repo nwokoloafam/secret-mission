@@ -436,6 +436,26 @@ describe("round task allocation", () => {
   const smallPool = (s: GameState, n: number) => ({ ...s, missions: missions.slice(0, n) });
   const startShared = (s: GameState) => startGame(s, ctx(), { duplicateAcknowledgment: missionCapacity(s).acknowledgment }).state;
 
+  it("requires explicit no-repeat consent for a missing swap buffer and can recover with new tasks", () => {
+    const s0 = setup(33);
+    s0.missions = [...missions.slice(0, 60), ...missions.filter(m => m.difficulty === "H")];
+    const capacity = missionCapacity(s0);
+    expect(capacity).toMatchObject({baseTotalRequired: 64, baseEarlyRequired: 60, totalRequired: 81, requiresDuplicates: false, bufferShort: true});
+    expectError(() => startGame(s0, ctx()), "swap_buffer_ack_required");
+    expectError(() => startGame(s0, ctx(), {capacityAcknowledgment: {mode: "duplicate", signature: capacity.acknowledgment}}), "swap_buffer_ack_required");
+    expectError(() => startGame(s0, ctx(), {capacityAcknowledgment: {mode: "unique", signature: "stale"}}), "swap_buffer_ack_required");
+    let s = startGame(s0, ctx(), {capacityAcknowledgment: {mode: "unique", signature: capacity.acknowledgment}}).state;
+    expect(s.game.settings.missionMode).toBe("unique");
+    for (let i = 0; i < 27; i++) s = skipMission(s, ctx(1), "p0").state;
+    const before = structuredClone(s);
+    expectError(() => reroll(s, ctx(1), "p1"), "no_fresh_missions");
+    expect(s).toEqual(before);
+    s.missions.push({id: "new", text: "Fresh during play", difficulty: "E", active: true});
+    s = reroll(s, ctx(1), "p1").state;
+    expect(P(s,"p1").missionId).toBe("new");
+    expect(s.game.settings.missionMode).toBe("unique");
+  });
+
   it("runs 33 players through every swap and catch with exactly 97 unique tasks", () => {
     const s0 = setup(33);
     s0.missions = [...missions.slice(0, 93), ...missions.filter((m) => m.difficulty === "H")];

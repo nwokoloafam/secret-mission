@@ -9,20 +9,22 @@ const pool = (early: number, hard: number): Mission[] => [
 ];
 
 describe("mission capacity", () => {
-  it("budgets 33 initial tasks, 33 swaps, and 31 catch reassignments", () => {
-    expect(getMissionCapacity(players(33), pool(93, 4), DEFAULT_SETTINGS)).toMatchObject({
-      playerCount: 33, totalRequired: 97, earlyRequired: 93,
-      totalAvailable: 97, earlyAvailable: 93, requiresDuplicates: false,
+  it("budgets a 50% swap buffer and separates late hard tasks for 33 players", () => {
+    expect(getMissionCapacity(players(33), pool(77, 4), DEFAULT_SETTINGS)).toMatchObject({
+      playerCount: 33, swapBuffer: 17, totalRequired: 81, earlyRequired: 77, hardRequired: 4,
+      totalAvailable: 81, earlyAvailable: 77, hardAvailable: 4, requiresDuplicates: false,
     });
   });
 
   it("warns for an early shortage even when the total is sufficient", () => {
-    expect(getMissionCapacity(players(33), pool(92, 5), DEFAULT_SETTINGS).requiresDuplicates).toBe(true);
+    expect(getMissionCapacity(players(33), pool(76, 5), DEFAULT_SETTINGS)).toMatchObject({
+      requiresDuplicates: false, bufferShort: true, baseTotalRequired: 64, baseEarlyRequired: 60,
+    });
   });
 
   it("uses all difficulties for a round starting at or below the hard threshold", () => {
-    expect(getMissionCapacity(players(5), pool(0, 13), DEFAULT_SETTINGS)).toMatchObject({
-      totalRequired: 13, earlyRequired: 0, requiresDuplicates: false,
+    expect(getMissionCapacity(players(5), pool(0, 16), DEFAULT_SETTINGS)).toMatchObject({
+      totalRequired: 11, baseTotalRequired: 8, earlyRequired: 0, hardRequired: 0, requiresDuplicates: false,
     });
   });
 

@@ -218,11 +218,17 @@ export async function tickAction(gameId: string): Promise<void> {
 // Host (Afam) actions
 // ─────────────────────────────────────────────
 
-export async function hostStart(admin: string, durationMinutes: number, duplicateAcknowledgment?: string): Promise<Result> {
+export async function hostStart(admin: string, durationMinutes: number, capacityAcknowledgment?: string | { mode: "unique" | "duplicate"; signature: string }): Promise<Result> {
   return wrap(async () => {
     const mins = Math.max(15, Math.min(600, Math.round(durationMinutes) || 150));
-    await host(admin, (s, c) => E.startGame(s, c, { durationMinutes: mins,
-      duplicateAcknowledgment: typeof duplicateAcknowledgment === "string" ? duplicateAcknowledgment : undefined }));
+    const acknowledgment = typeof capacityAcknowledgment === "string"
+      ? { mode: "duplicate" as const, signature: capacityAcknowledgment }
+      : capacityAcknowledgment &&
+      (capacityAcknowledgment.mode === "unique" || capacityAcknowledgment.mode === "duplicate") &&
+      typeof capacityAcknowledgment.signature === "string"
+      ? { mode: capacityAcknowledgment.mode, signature: capacityAcknowledgment.signature }
+      : undefined;
+    await host(admin, (s, c) => E.startGame(s, c, { durationMinutes: mins, capacityAcknowledgment: acknowledgment }));
     return { ok: true, message: "Game started." };
   });
 }

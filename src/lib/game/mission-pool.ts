@@ -24,11 +24,23 @@ export function getMissionCapacity(
   const totalAvailable = distinctMissions(active).length;
   const hardAt = Math.max(0, Math.floor(settings.hardMissionsAtAlive));
   const earlyAvailable = distinctMissions(active.filter((m) => m.difficulty !== "H")).length;
-  const totalRequired = playerCount ? playerCount * 2 + Math.max(0, playerCount - 2) : 0;
-  const earlyRequired = playerCount > hardAt
-    ? playerCount * 2 + Math.max(0, playerCount - Math.max(1, hardAt) - 1)
+  const hardAvailable = distinctMissions(active.filter((m) => m.difficulty === "H")).length;
+  // Plan for roughly half of the checked-in players to use their optional swap.
+  const swapBuffer = Math.ceil(playerCount / 2);
+  const hasEarlyPhase = playerCount > hardAt;
+  const baseEarlyRequired = hasEarlyPhase
+    ? playerCount + Math.max(0, playerCount - Math.max(1, hardAt) - 1)
     : 0;
-  const requiresDuplicates = totalAvailable < totalRequired || earlyAvailable < earlyRequired;
+  // From the threshold down to one survivor, each non-final catch can need a task.
+  const hardRequired = hasEarlyPhase ? Math.max(0, hardAt - 1) : 0;
+  const baseTotalRequired = hasEarlyPhase
+    ? baseEarlyRequired + hardRequired
+    : playerCount + Math.max(0, playerCount - 2);
+  // Late assignments can use remaining Easy/Medium tasks too; Hard is optional.
+  const requiresDuplicates = totalAvailable < baseTotalRequired || earlyAvailable < baseEarlyRequired;
+  const earlyRequired = baseEarlyRequired + (hasEarlyPhase ? swapBuffer : 0);
+  const totalRequired = baseTotalRequired + swapBuffer;
+  const bufferShort = totalAvailable < totalRequired || earlyAvailable < earlyRequired;
 
   // A stale acknowledgment must not start a changed roster or task pool.
   const signature = JSON.stringify([
@@ -37,8 +49,9 @@ export function getMissionCapacity(
   ]);
   let hash = 2166136261;
   for (let i = 0; i < signature.length; i++) hash = Math.imul(hash ^ signature.charCodeAt(i), 16777619);
-  const acknowledgment = `mission-capacity-v1-${(hash >>> 0).toString(16)}`;
-  return { playerCount, totalAvailable, earlyAvailable, totalRequired, earlyRequired, requiresDuplicates, acknowledgment };
+  const acknowledgment = `mission-capacity-v2-${(hash >>> 0).toString(16)}`;
+  return { playerCount, totalAvailable, earlyAvailable, hardAvailable, totalRequired, earlyRequired, hardRequired,
+    baseTotalRequired, baseEarlyRequired, swapBuffer, bufferShort, requiresDuplicates, acknowledgment };
 }
 
 export const missionCapacity = (state: GameState) => getMissionCapacity(state.players, state.missions, state.game.settings);
